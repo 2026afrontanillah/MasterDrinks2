@@ -447,6 +447,7 @@ function registrarAuditoria(id_admin, accion, entidad, id_registro, detalle) {
 }
 
 const round2 = n => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+const round4 = n => Math.round((Number(n) + Number.EPSILON) * 10000) / 10000;
 
 /**
  * Reparte el precio de un paquete entre los productos que lleva dentro.
@@ -1909,7 +1910,7 @@ app.post('/api/comanda', (req, res) => {
         const botella = dbProdMap.get(prod.id_botella_vinculada) ||
           await dbGet('SELECT id_producto, nombre, stock_actual, activo FROM producto WHERE id_producto = ?', [prod.id_botella_vinculada]);
         const vasosPorBotella = Math.max(1, parseInt(prod.vasos_por_botella || 10, 10));
-        const botellasReq = round2(cantPedida / vasosPorBotella);
+        const botellasReq = round4(cantPedida / vasosPorBotella);
         if (!botella || !botella.activo || botella.stock_actual < botellasReq) {
           const disp = botella ? Number(botella.stock_actual).toFixed(2) : '0';
           throw new BusinessError(
@@ -2014,7 +2015,7 @@ app.post('/api/comanda', (req, res) => {
       const prod = dbProdMap.get(idProd);
       if (prod.id_botella_vinculada) {
         const vasosPorBotella = Math.max(1, parseInt(prod.vasos_por_botella || 10, 10));
-        const botellasADeducir = round2(cant / vasosPorBotella);
+        const botellasADeducir = round4(cant / vasosPorBotella);
         const matchBotella = await dbGet(
           `SELECT id_producto, nombre, stock_actual FROM producto WHERE id_producto = ? AND activo = 1`,
           [prod.id_botella_vinculada]
@@ -2025,7 +2026,7 @@ app.post('/api/comanda', (req, res) => {
             `No se pudo reservar el stock: la botella ${matchBotella ? matchBotella.nombre : '#' + prod.id_botella_vinculada} no tiene unidades suficientes (quedan ${disp} botellas, se requieren ${botellasADeducir}).`
           );
         }
-        const nuevoStockBotella = round2(Math.max(0, matchBotella.stock_actual - botellasADeducir));
+        const nuevoStockBotella = round4(Math.max(0, matchBotella.stock_actual - botellasADeducir));
         await dbRun('UPDATE producto SET stock_actual = ? WHERE id_producto = ?', [nuevoStockBotella, matchBotella.id_producto]);
         await dbRun(
           `INSERT INTO movimiento_stock (id_producto, id_admin, tipo_movimiento, cantidad, stock_anterior, stock_nuevo, motivo, fecha_hora)
@@ -3511,9 +3512,9 @@ app.post('/api/admin/comandas/anular', (req, res) => {
       if (prod && prod.id_botella_vinculada) {
         let matchBotella = await dbGet('SELECT id_producto, nombre, stock_actual FROM producto WHERE id_producto = ? AND activo = 1', [prod.id_botella_vinculada]);
         const vasosPorBotella = Math.max(1, parseInt(prod.vasos_por_botella || 10, 10));
-        const botellasADevolver = round2(det.cantidad / vasosPorBotella);
+        const botellasADevolver = round4(det.cantidad / vasosPorBotella);
         if (matchBotella) {
-          const nuevoStockBotella = round2(matchBotella.stock_actual + botellasADevolver);
+          const nuevoStockBotella = round4(matchBotella.stock_actual + botellasADevolver);
           await dbRun('UPDATE producto SET stock_actual = ? WHERE id_producto = ?', [nuevoStockBotella, matchBotella.id_producto]);
           await dbRun(
             `INSERT INTO movimiento_stock (id_producto, id_admin, tipo_movimiento, cantidad, stock_anterior, stock_nuevo, motivo, fecha_hora)

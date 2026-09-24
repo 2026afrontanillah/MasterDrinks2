@@ -1124,75 +1124,75 @@ document.addEventListener('DOMContentLoaded', () => {
         if (visitados.has(id_producto)) return;
         visitados.add(id_producto);
 
+        const p = products.find(x => x.id_producto === id_producto);
+        if (!p) return;
+
         const grid = document.getElementById('product-grid');
         const card = grid ? grid.querySelector(`.product-card[data-id="${id_producto}"]`) : null;
         if (card) {
-            const p = products.find(x => x.id_producto === id_producto);
-            if (p) {
-                const unidades = unidadesEnCarrito(id_producto);
-                const displayStock = calcularStockRestanteProducto(p);
-                const tope = calcularStockTopeProducto(p);
-                const pct = tope > 0 ? Math.min(100, Math.max(0, Math.round((displayStock / tope) * 100))) : (displayStock > 0 ? 100 : 0);
-                const isOut = displayStock <= 0;
-                const statusClass = isOut ? 'out' : (pct <= 40 ? 'low' : 'normal');
-                const strokeColor = isOut ? '#e5e7eb' : (pct <= 40 ? '#ef4444' : '#facc15');
+            const unidades = unidadesEnCarrito(id_producto);
+            const displayStock = calcularStockRestanteProducto(p);
+            const tope = calcularStockTopeProducto(p);
+            const pct = tope > 0 ? Math.min(100, Math.max(0, Math.round((displayStock / tope) * 100))) : (displayStock > 0 ? 100 : 0);
+            const isOut = displayStock <= 0;
+            const statusClass = isOut ? 'out' : (pct <= 40 ? 'low' : 'normal');
+            const strokeColor = isOut ? '#e5e7eb' : (pct <= 40 ? '#ef4444' : '#facc15');
 
-                card.classList.toggle('out-of-stock', isOut);
+            card.classList.toggle('out-of-stock', isOut);
 
-                const gaugeBar = card.querySelector('.gauge-bar');
-                if (gaugeBar) {
-                    const pathLen = 216.77;
-                    const offset = pathLen * (1 - (isOut ? 0 : pct / 100));
-                    gaugeBar.style.strokeDashoffset = offset;
-                    gaugeBar.style.stroke = strokeColor;
+            const gaugeBar = card.querySelector('.gauge-bar');
+            if (gaugeBar) {
+                const pathLen = 216.77;
+                const offset = pathLen * (1 - (isOut ? 0 : pct / 100));
+                gaugeBar.style.strokeDashoffset = offset;
+                gaugeBar.style.stroke = strokeColor;
+            }
+
+            const stamp = card.querySelector('.stamp-agotado');
+            const foto = card.querySelector('.product-foto, .emoji');
+            if (stamp) stamp.classList.toggle('hide', !isOut);
+            if (foto) foto.classList.toggle('foto-agotada', isOut);
+
+            const footer = card.querySelector('.stock-footer');
+            if (footer) {
+                footer.className = `stock-footer ${statusClass}`;
+                const labelLine = footer.querySelector('.stock-label-line');
+                if (labelLine) labelLine.textContent = `Stock: ${pct}%`;
+                const unitsLine = footer.querySelector('.stock-units-line');
+                if (unitsLine) {
+                    const unidadTexto = p.id_botella_vinculada ? 'VASOS' : 'UDS';
+                    unitsLine.className = `stock-units-line stock ${isOut ? 'out' : ''}`;
+                    unitsLine.innerHTML = isOut ? `0 ${unidadTexto}<span class="sr-only"> (Agotado)</span>` : `${displayStock} ${unidadTexto}`;
                 }
+            }
 
-                const stamp = card.querySelector('.stamp-agotado');
-                const foto = card.querySelector('.product-foto, .emoji');
-                if (stamp) stamp.classList.toggle('hide', !isOut);
-                if (foto) foto.classList.toggle('foto-agotada', isOut);
-
-                const footer = card.querySelector('.stock-footer');
-                if (footer) {
-                    footer.className = `stock-footer ${statusClass}`;
-                    const labelLine = footer.querySelector('.stock-label-line');
-                    if (labelLine) labelLine.textContent = `Stock: ${pct}%`;
-                    const unitsLine = footer.querySelector('.stock-units-line');
-                    if (unitsLine) {
-                        const unidadTexto = p.id_botella_vinculada ? 'VASOS' : 'UDS';
-                        unitsLine.className = `stock-units-line stock ${isOut ? 'out' : ''}`;
-                        unitsLine.innerHTML = isOut ? `0 ${unidadTexto}<span class="sr-only"> (Agotado)</span>` : `${displayStock} ${unidadTexto}`;
-                    }
+            let badge = card.querySelector('.cart-badge');
+            if (unidades > 0) {
+                if (!badge) {
+                    badge = document.createElement('span');
+                    badge.className = 'cart-badge';
+                    card.appendChild(badge);
                 }
-
-                let badge = card.querySelector('.cart-badge');
-                if (unidades > 0) {
-                    if (!badge) {
-                        badge = document.createElement('span');
-                        badge.className = 'cart-badge';
-                        card.appendChild(badge);
-                    }
-                    badge.textContent = unidades;
-                    if (conRebote) {
-                        badge.classList.remove('bump');
-                        void badge.offsetWidth;
-                        badge.classList.add('bump');
-                    }
-                } else if (badge) {
-                    badge.remove();
+                badge.textContent = unidades;
+                if (conRebote) {
+                    badge.classList.remove('bump');
+                    void badge.offsetWidth;
+                    badge.classList.add('bump');
                 }
-
-                // Propagar actualización a botella vinculada o vasos vinculados
-                if (p.id_botella_vinculada) {
-                    actualizarTarjeta(p.id_botella_vinculada, false, visitados);
-                }
-                products.forEach(hijo => {
-                    if (hijo.id_botella_vinculada === id_producto) {
-                        actualizarTarjeta(hijo.id_producto, false, visitados);
-                    }
-                });
+            } else if (badge) {
+                badge.remove();
             }
         }
+
+        // Propagar SIEMPRE a la botella vinculada o a los vasos vinculados
+        if (p.id_botella_vinculada) {
+            actualizarTarjeta(p.id_botella_vinculada, false, visitados);
+        }
+        products.forEach(hijo => {
+            if (hijo.id_botella_vinculada === id_producto) {
+                actualizarTarjeta(hijo.id_producto, false, visitados);
+            }
+        });
 
         // Actualizar también las tarjetas de combos que incluyan este producto
         promociones.forEach(pr => {
@@ -5457,6 +5457,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const selectBotella = document.getElementById('prod-botella-vinculada');
+            const grupoVasos = document.getElementById('prod-grupo-vasos');
             if (selectBotella) {
                 selectBotella.innerHTML = '<option value="">Ninguna (Producto independiente)</option>';
                 (data.productos || []).forEach(p => {
@@ -5465,6 +5466,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     opt.textContent = `${p.nombre} (Stock: ${p.stock_actual})`;
                     selectBotella.appendChild(opt);
                 });
+                if (grupoVasos) {
+                    grupoVasos.style.display = selectBotella.value ? 'block' : 'none';
+                }
+                selectBotella.onchange = () => {
+                    if (grupoVasos) {
+                        grupoVasos.style.display = selectBotella.value ? 'block' : 'none';
+                    }
+                };
             }
         } catch (err) {
             console.error(err);
@@ -6361,6 +6370,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sel.value = p.id_categoria || '';
 
         const selectBotellaEdit = document.getElementById('editar-botella-vinculada');
+        const grupoVasosEdit = document.getElementById('editar-grupo-vasos');
         if (selectBotellaEdit) {
             selectBotellaEdit.innerHTML = '<option value="">Ninguna (Producto independiente)</option>';
             (catalogoAdmin.productos || []).forEach(prodOpt => {
@@ -6372,6 +6382,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
             selectBotellaEdit.value = p.id_botella_vinculada || '';
+            if (grupoVasosEdit) {
+                grupoVasosEdit.style.display = p.id_botella_vinculada ? 'block' : 'none';
+            }
+            selectBotellaEdit.onchange = () => {
+                if (grupoVasosEdit) {
+                    grupoVasosEdit.style.display = selectBotellaEdit.value ? 'block' : 'none';
+                }
+            };
         }
         const inputVasosEdit = document.getElementById('editar-vasos-por-botella');
         if (inputVasosEdit) {
@@ -7676,6 +7694,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${descSub}
                     </div>
                 </div>
+                ${p.id_botella_vinculada ? `
+                <div class="admin-stock-actions-grid" style="grid-template-columns: 1fr;">
+                    <button type="button" class="stock-action-btn historial" data-id="${p.id_producto}" title="Ver historial de movimientos">
+                        <span>🕒</span> Historial de Movimientos
+                    </button>
+                </div>
+                ` : `
                 <div class="admin-stock-actions-grid">
                     <button type="button" class="stock-action-btn entrada" data-id="${p.id_producto}" title="Ingresar stock">
                         <span>＋</span> Entrada
@@ -7687,11 +7712,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span>🕒</span> Historial
                     </button>
                 </div>
+                `}
             `;
 
-            card.querySelector('.stock-action-btn.entrada').addEventListener('click', () => openStockActionModal(p, 'ENTRADA'));
-            card.querySelector('.stock-action-btn.salida').addEventListener('click', () => openStockActionModal(p, 'SALIDA'));
-            card.querySelector('.stock-action-btn.historial').addEventListener('click', () => openStockHistoryModal(p));
+            if (p.id_botella_vinculada) {
+                card.querySelector('.stock-action-btn.historial').addEventListener('click', () => openStockHistoryModal(p));
+            } else {
+                card.querySelector('.stock-action-btn.entrada').addEventListener('click', () => openStockActionModal(p, 'ENTRADA'));
+                card.querySelector('.stock-action-btn.salida').addEventListener('click', () => openStockActionModal(p, 'SALIDA'));
+                card.querySelector('.stock-action-btn.historial').addEventListener('click', () => openStockHistoryModal(p));
+            }
 
             grid.appendChild(card);
         });
