@@ -816,7 +816,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const enCatalogo = products.find(p => p.id_producto === item.id_producto);
-            const disponible = enCatalogo ? enCatalogo.stock_actual : 0;
+            let disponible = 0;
+            if (enCatalogo) {
+                if (enCatalogo.id_botella_vinculada) {
+                    const botella = products.find(b => b.id_producto === enCatalogo.id_botella_vinculada);
+                    disponible = botella ? Math.floor(botella.stock_actual * (enCatalogo.vasos_por_botella || 10)) : 0;
+                } else {
+                    disponible = enCatalogo.stock_actual;
+                }
+            }
             if (item.cantidad <= disponible) return;
 
             problemas.push({ item, disponible });
@@ -1063,23 +1071,69 @@ document.addEventListener('DOMContentLoaded', () => {
         barra.firstElementChild.style.width = nivel.ancho;
     }
 
+    function calcularStockRestanteProducto(p) {
+        if (!p) return 0;
+        if (p.id_botella_vinculada) {
+            const botella = products.find(x => x.id_producto === p.id_botella_vinculada);
+            if (!botella || botella.stock_actual <= 0) return 0;
+            const rendimiento = Math.max(1, parseInt(p.vasos_por_botella || 10, 10));
+            const botellasDirectas = unidadesEnCarrito(botella.id_producto);
+            let botellasPorVasos = 0;
+            products.forEach(h => {
+                if (h.id_botella_vinculada === botella.id_producto) {
+                    const cantVasos = unidadesEnCarrito(h.id_producto);
+                    const rend = Math.max(1, parseInt(h.vasos_por_botella || 10, 10));
+                    botellasPorVasos += cantVasos / rend;
+                }
+            });
+            const botellasLibres = Math.max(0, botella.stock_actual - (botellasDirectas + botellasPorVasos));
+            return Math.floor(botellasLibres * rendimiento);
+        } else {
+            const botellasDirectas = unidadesEnCarrito(p.id_producto);
+            let botellasPorVasos = 0;
+            products.forEach(h => {
+                if (h.id_botella_vinculada === p.id_producto) {
+                    const cantVasos = unidadesEnCarrito(h.id_producto);
+                    const rend = Math.max(1, parseInt(h.vasos_por_botella || 10, 10));
+                    botellasPorVasos += cantVasos / rend;
+                }
+            });
+            const botellasLibres = Math.max(0, p.stock_actual - (botellasDirectas + botellasPorVasos));
+            return Math.floor(botellasLibres);
+        }
+    }
+
+    function calcularStockTopeProducto(p) {
+        if (!p) return 10;
+        if (p.id_botella_vinculada) {
+            const botella = products.find(x => x.id_producto === p.id_botella_vinculada);
+            if (!botella) return 10;
+            const rendimiento = Math.max(1, parseInt(p.vasos_por_botella || 10, 10));
+            const topeBotella = botella.stock_tope || botella.stock_actual || 10;
+            return Math.floor(topeBotella * rendimiento);
+        }
+        return p.stock_tope || p.stock_actual || 10;
+    }
+
     /**
      * Refresca una sola tarjeta: stock restante y unidades ya en el carrito.
      * Antes cada toque reconstruía la rejilla entera —veinte tarjetas tiradas y
      * vueltas a crear—, y eso se ve como un parpadeo y pierde el desplazamiento.
      */
-    function actualizarTarjeta(id_producto, conRebote) {
+    function actualizarTarjeta(id_producto, conRebote, visitados = new Set()) {
+        if (visitados.has(id_producto)) return;
+        visitados.add(id_producto);
+
         const grid = document.getElementById('product-grid');
         const card = grid ? grid.querySelector(`.product-card[data-id="${id_producto}"]`) : null;
         if (card) {
             const p = products.find(x => x.id_producto === id_producto);
             if (p) {
                 const unidades = unidadesEnCarrito(id_producto);
-                const restante = p.stock_actual - unidades;
-                const displayStock = Math.max(0, restante);
-                const tope = p.stock_tope || p.stock_actual || 10;
+                const displayStock = calcularStockRestanteProducto(p);
+                const tope = calcularStockTopeProducto(p);
                 const pct = tope > 0 ? Math.min(100, Math.max(0, Math.round((displayStock / tope) * 100))) : (displayStock > 0 ? 100 : 0);
-                const isOut = restante <= 0;
+                const isOut = displayStock <= 0;
                 const statusClass = isOut ? 'out' : (pct <= 40 ? 'low' : 'normal');
                 const strokeColor = isOut ? '#e5e7eb' : (pct <= 40 ? '#ef4444' : '#facc15');
 
@@ -1105,8 +1159,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (labelLine) labelLine.textContent = `Stock: ${pct}%`;
                     const unitsLine = footer.querySelector('.stock-units-line');
                     if (unitsLine) {
+                        const unidadTexto = p.id_botella_vinculada ? 'VASOS' : 'UDS';
                         unitsLine.className = `stock-units-line stock ${isOut ? 'out' : ''}`;
-                        unitsLine.innerHTML = isOut ? '0 UNIDADES<span class="sr-only"> (Agotado)</span>' : `${displayStock} UDS`;
+                        unitsLine.innerHTML = isOut ? `0 ${unidadTexto}<span class="sr-only"> (Agotado)</span>` : `${displayStock} ${unidadTexto}`;
                     }
                 }
 
@@ -1126,6 +1181,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else if (badge) {
                     badge.remove();
                 }
+
+                // Propagar actualización a botella vinculada o vasos vinculados
+                if (p.id_botella_vinculada) {
+                    actualizarTarjeta(p.id_botella_vinculada, false, visitados);
+                }
+                products.forEach(hijo => {
+                    if (hijo.id_botella_vinculada === id_producto) {
+                        actualizarTarjeta(hijo.id_producto, false, visitados);
+                    }
+                });
             }
         }
 
@@ -1314,15 +1379,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         filtered.forEach((p, i) => {
             const unidades = unidadesEnCarrito(p.id_producto);
-            const displayStock = p.stock_actual - unidades;
+            const displayStock = calcularStockRestanteProducto(p);
             const visibleStock = Math.max(0, displayStock);
-            const tope = p.stock_tope || p.stock_actual || 10;
+            const tope = calcularStockTopeProducto(p);
             const pct = tope > 0 ? Math.min(100, Math.max(0, Math.round((visibleStock / tope) * 100))) : (visibleStock > 0 ? 100 : 0);
             const isOut = displayStock <= 0;
             const statusClass = isOut ? 'out' : (pct <= 40 ? 'low' : 'normal');
             const strokeColor = isOut ? '#e5e7eb' : (pct <= 40 ? '#ef4444' : '#facc15');
             const pathLen = 216.77;
             const offset = pathLen * (1 - (isOut ? 0 : pct / 100));
+            const unidadTexto = p.id_botella_vinculada ? 'VASOS' : 'UDS';
 
             const card = document.createElement('div');
             card.className = `product-card ${p.requiere_acompanante ? 'con-acomp' : ''} ${animar ? 'enter' : ''} ${isOut ? 'out-of-stock' : ''}`;
@@ -1366,7 +1432,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </svg>
                         <div class="stock-footer-content">
                             <div class="stock-label-line">Stock: ${pct}%</div>
-                            <div class="stock-units-line stock ${isOut ? 'out' : ''}">${isOut ? '0 UNIDADES<span class="sr-only"> (Agotado)</span>' : `${visibleStock} UDS`}</div>
+                            <div class="stock-units-line stock ${isOut ? 'out' : ''}">${isOut ? `0 ${unidadTexto}<span class="sr-only"> (Agotado)</span>` : `${visibleStock} ${unidadTexto}`}</div>
                         </div>
                     </div>
                 </div>
@@ -1623,7 +1689,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function addToCart(product, acompanantes) {
-        if (unidadesEnCarrito(product.id_producto) >= product.stock_actual) {
+        if (calcularStockRestanteProducto(product) <= 0) {
             // Dos pulsos, distintos del toque normal: se nota en la mano que
             // eso NO entró, sin tener que leer el aviso.
             vibrar([25, 40, 25]);
@@ -1645,7 +1711,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // prometer. Mejor enterarse aquí que en la barra.
         for (const a of acomps) {
             const cat = products.find(p => p.id_producto === a.id_producto);
-            const disponible = cat ? cat.stock_actual - unidadesEnCarrito(a.id_producto) : 0;
+            const disponible = cat ? calcularStockRestanteProducto(cat) : 0;
             if (disponible < a.cantidad) {
                 vibrar([25, 40, 25]);
                 notify('No queda ' + a.nombre + ' para acompañar.', 'warn');
@@ -1664,7 +1730,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 nombre: product.nombre,
                 precio_venta: parseFloat(product.precio_venta),
                 cantidad: 1,
-                stock_max: product.stock_actual,
+                stock_max: product.id_botella_vinculada ? 9999 : product.stock_actual,
                 acompanantes: acomps
             });
             renderCart();
@@ -2591,11 +2657,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Se consulta el stock vivo, no el que había al añadirlo: otra
                 // tablet puede haber vendido unidades desde entonces.
                 const enCatalogo = products.find(p => p.id_producto === item.id_producto);
-                const tope = enCatalogo ? enCatalogo.stock_actual : item.stock_max;
-                // unidadesEnCarrito y no item.cantidad: el mismo producto puede
-                // estar además de acompañante en otra línea, y todo sale del
-                // mismo almacén.
-                if (unidadesEnCarrito(item.id_producto) >= tope) {
+                if (calcularStockRestanteProducto(enCatalogo) <= 0) {
+                    vibrar([25, 40, 25]);
                     notify('No queda stock de ' + item.nombre + '.', 'warn');
                     return;
                 }
@@ -5977,6 +6040,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         pintarCategorias();
         pintarProductosAdmin();
+
+        const selectBotella = document.getElementById('prod-botella-vinculada');
+        if (selectBotella && catalogoAdmin.productos) {
+            const valPrev = selectBotella.value;
+            selectBotella.innerHTML = '<option value="">Ninguna (Producto independiente)</option>';
+            catalogoAdmin.productos.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id_producto;
+                opt.textContent = `${p.nombre} (Stock: ${p.stock_actual})`;
+                selectBotella.appendChild(opt);
+            });
+            if (valPrev) selectBotella.value = valPrev;
+        }
     }
 
     async function reordenarCategoriaPosicion(catId, direccion) {
@@ -6185,9 +6261,14 @@ document.addEventListener('DOMContentLoaded', () => {
             productos.forEach((p, pIdx) => {
                 const precio = Number(p.precio_venta).toFixed(2) + ' Bs.';
                 const estaActivo = p.activo !== 0;
+                let stockTexto = p.stock_actual + ' u.';
+                if (p.id_botella_vinculada) {
+                    const parent = todos.find(b => b.id_producto === p.id_botella_vinculada);
+                    stockTexto = `Descuenta de: ${parent ? parent.nombre : '#' + p.id_botella_vinculada} (${p.vasos_por_botella || 10} v/bot)`;
+                }
                 const fila = filaLista({
                     titulo: p.nombre,
-                    detalle: [precio, p.stock_actual + ' u.'].join(' · '),
+                    detalle: [precio, stockTexto].join(' · '),
                     insignia: (p.vendido > 0 ? 'vendido ' + p.vendido + '×' : '') + (!estaActivo ? ' · Desactivado' : ''),
                     inactivo: false,
                     foto: urlFoto(p),
@@ -7541,8 +7622,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const tieneFoto = Boolean(p.tiene_foto);
             const fotoSrc = urlFoto(p);
 
-            const visibleStock = Math.max(0, p.stock_actual);
-            const tope = p.stock_tope || p.stock_actual || 10;
+            let visibleStock = Math.max(0, p.stock_actual);
+            let unitLabel = 'uds.';
+            let descSub = '';
+            if (p.id_botella_vinculada) {
+                const parentBot = adminStockProducts.find(b => b.id_producto === p.id_botella_vinculada);
+                const rend = Math.max(1, parseInt(p.vasos_por_botella || 10, 10));
+                visibleStock = parentBot ? Math.floor(parentBot.stock_actual * rend) : 0;
+                unitLabel = 'vasos';
+                descSub = `<small style="display:block;font-size:10px;color:#94a3b8;margin-top:2px;">(Descuenta de ${parentBot ? parentBot.nombre : 'botella'})</small>`;
+            }
+            const tope = p.id_botella_vinculada ? (visibleStock || 10) : (p.stock_tope || p.stock_actual || 10);
             const pct = tope > 0 ? Math.min(100, Math.max(0, Math.round((visibleStock / tope) * 100))) : (visibleStock > 0 ? 100 : 0);
             const isOut = visibleStock <= 0;
             const stockStatus = isOut ? 'is-out' : (pct <= 40 ? 'is-low' : 'is-ok');
@@ -7581,8 +7671,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="admin-stock-qty-pill ${stockStatus}">
                             <span class="stock-qty-label">Stock:</span>
                             <span class="stock-qty-num">${visibleStock}</span>
-                            <span class="stock-qty-unit">${isOut ? 'agotado' : 'uds.'}</span>
+                            <span class="stock-qty-unit">${isOut ? 'agotado' : unitLabel}</span>
                         </div>
+                        ${descSub}
                     </div>
                 </div>
                 <div class="admin-stock-actions-grid">

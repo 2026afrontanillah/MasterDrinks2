@@ -632,6 +632,19 @@
 
                                 <div class="form-row-2col">
                                     <div class="form-group">
+                                        <label for="prod-botella-vinculada">Botella de la que descuenta <span class="etiqueta-opcional">(Para Vasos / Shots)</span></label>
+                                        <select id="prod-botella-vinculada">
+                                            <option value="">Ninguna (Producto independiente)</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="prod-vasos-por-botella">Rendimiento <span class="etiqueta-opcional">(Vasos por botella)</span></label>
+                                        <input type="number" id="prod-vasos-por-botella" min="1" max="100" value="10" placeholder="10">
+                                    </div>
+                                </div>
+
+                                <div class="form-row-2col">
+                                    <div class="form-group">
                                         <label>Acompañamiento</label>
                                         <label class="casilla" for="prod-requiere">
                                             <input type="checkbox" id="prod-requiere">
@@ -1518,16 +1531,23 @@
                     <input type="number" id="editar-precio" min="0" step="0.5" inputmode="decimal">
                 </div>
                 <div class="form-group">
-                    <label for="editar-vasos-por-botella">Rendimiento <span class="etiqueta-opcional">(Vasos / Shots por botella)</span></label>
-                    <input type="number" id="editar-vasos-por-botella" min="1" max="100" value="10" placeholder="10">
+                    <label for="editar-botella-vinculada">Botella de la que descuenta <span class="etiqueta-opcional">(Para Vasos / Shots)</span></label>
+                    <select id="editar-botella-vinculada">
+                        <option value="">Ninguna (Producto independiente)</option>
+                    </select>
                 </div>
             </div>
 
             <div class="form-row-2col">
                 <div class="form-group">
+                    <label for="editar-vasos-por-botella">Rendimiento <span class="etiqueta-opcional">(Vasos / Shots por botella)</span></label>
+                    <input type="number" id="editar-vasos-por-botella" min="1" max="100" value="10" placeholder="10">
+                </div>
+                <div class="form-group">
                     <label for="editar-descripcion">Descripción</label>
                     <input type="text" id="editar-descripcion" maxlength="250" placeholder="Ej. Medida o vaso...">
                 </div>
+            </div>
                 <!-- Foto del producto -->
                 <div class="form-group editar-foto-grupo" style="margin-top: 0; margin-bottom: 0;">
                     <label>Foto del producto <small style="font-weight:400;text-transform:none">opcional</small></label>
@@ -1536,7 +1556,6 @@
                         <button type="button" id="editar-foto-btn" class="secondary-btn">📷 Cambiar foto</button>
                     </div>
                 </div>
-            </div>
 
             <p class="campo-nota">
                 El stock no se cambia aquí: se mueve en <strong>Inventario</strong>,
@@ -2154,7 +2173,7 @@
     <!-- Deep Neural Face Recognition Library (100% Offline Local) -->
     <script src="js/face-api.js"></script>
     <!-- Main Client-side logic script -->
-    <script src="app.js?v=133"></script>
+    <script src="app.js?v=134"></script>
 
     <!-- PWA Service Worker Registration -->
     <script>

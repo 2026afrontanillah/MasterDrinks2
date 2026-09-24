@@ -1905,10 +1905,23 @@ app.post('/api/comanda', (req, res) => {
 
     for (const [idProd, cantPedida] of cantidadesPorProducto) {
       const prod = dbProdMap.get(idProd);
-      if (prod.stock_actual < cantPedida) {
-        throw new BusinessError(
-          `No hay stock suficiente de ${prod.nombre} (quedan ${prod.stock_actual}, pides ${cantPedida}).`
-        );
+      if (prod.id_botella_vinculada) {
+        const botella = dbProdMap.get(prod.id_botella_vinculada) ||
+          await dbGet('SELECT id_producto, nombre, stock_actual, activo FROM producto WHERE id_producto = ?', [prod.id_botella_vinculada]);
+        const vasosPorBotella = Math.max(1, parseInt(prod.vasos_por_botella || 10, 10));
+        const botellasReq = round2(cantPedida / vasosPorBotella);
+        if (!botella || !botella.activo || botella.stock_actual < botellasReq) {
+          const disp = botella ? Number(botella.stock_actual).toFixed(2) : '0';
+          throw new BusinessError(
+            `No hay stock suficiente de la botella ${botella ? botella.nombre : '#' + prod.id_botella_vinculada} (quedan ${disp} botellas, se requieren ${botellasReq} para ${cantPedida} vaso(s)).`
+          );
+        }
+      } else {
+        if (prod.stock_actual < cantPedida) {
+          throw new BusinessError(
+            `No hay stock suficiente de ${prod.nombre} (quedan ${prod.stock_actual}, pides ${cantPedida}).`
+          );
+        }
       }
     }
 
@@ -1999,54 +2012,46 @@ app.post('/api/comanda', (req, res) => {
 
     for (const [idProd, cant] of cantidadesPorProducto) {
       const prod = dbProdMap.get(idProd);
-      const upd = await dbRun(
-        `UPDATE producto SET stock_actual = stock_actual - ?
-         WHERE id_producto = ? AND stock_actual >= ?`,
-        [cant, idProd, cant]
-      );
-      if (upd.affectedRows === 0) {
-        throw new BusinessError(
-          `No se pudo reservar el stock de ${prod.nombre}: ya no quedan unidades suficientes.`
-        );
-      }
-      await dbRun(
-        `INSERT INTO movimiento_stock (id_producto, id_admin, tipo_movimiento, cantidad, stock_anterior, stock_nuevo, motivo, fecha_hora)
-         VALUES (?, NULL, 'SALIDA', ?, ?, ?, ?, ?)`,
-        [idProd, cant, prod.stock_actual, prod.stock_actual - cant, `Venta comanda #${idComanda}`, nowStr]
-      );
-
-      // Descuento de stock de botella si es venta de vasos / shots (Item 7 y vinculo explícito)
-      let matchBotella = null;
       if (prod.id_botella_vinculada) {
-        matchBotella = await dbGet(
+        const vasosPorBotella = Math.max(1, parseInt(prod.vasos_por_botella || 10, 10));
+        const botellasADeducir = round2(cant / vasosPorBotella);
+        const matchBotella = await dbGet(
           `SELECT id_producto, nombre, stock_actual FROM producto WHERE id_producto = ? AND activo = 1`,
           [prod.id_botella_vinculada]
         );
-      }
-      if (!matchBotella) {
-        const catProd = prod.id_categoria ? await dbGet('SELECT nombre FROM categoria_producto WHERE id_categoria = ?', [prod.id_categoria]) : null;
-        const esVasoOShot = (catProd && /vaso|shot/i.test(catProd.nombre)) || /vaso|shot/i.test(prod.nombre);
-        if (esVasoOShot) {
-          const busquedaBotella = prod.nombre.replace(/vaso|shot|de\s+|medida\s+/gi, '').trim();
-          if (busquedaBotella.length >= 3) {
-            matchBotella = await dbGet(
-              `SELECT id_producto, nombre, stock_actual FROM producto 
-               WHERE activo = 1 AND id_producto != ? AND LOWER(nombre) LIKE ? AND stock_actual > 0 
-               ORDER BY stock_actual DESC LIMIT 1`,
-              [idProd, '%' + busquedaBotella.toLowerCase() + '%']
-            );
-          }
+        if (!matchBotella || matchBotella.stock_actual < botellasADeducir) {
+          const disp = matchBotella ? Number(matchBotella.stock_actual).toFixed(2) : '0';
+          throw new BusinessError(
+            `No se pudo reservar el stock: la botella ${matchBotella ? matchBotella.nombre : '#' + prod.id_botella_vinculada} no tiene unidades suficientes (quedan ${disp} botellas, se requieren ${botellasADeducir}).`
+          );
         }
-      }
-
-      if (matchBotella) {
-        const vasosPorBotella = prod.vasos_por_botella || 10;
-        const botellasADeducir = Math.max(1, Math.ceil(cant / vasosPorBotella));
-        await dbRun('UPDATE producto SET stock_actual = MAX(0, stock_actual - ?) WHERE id_producto = ?', [botellasADeducir, matchBotella.id_producto]);
+        const nuevoStockBotella = round2(Math.max(0, matchBotella.stock_actual - botellasADeducir));
+        await dbRun('UPDATE producto SET stock_actual = ? WHERE id_producto = ?', [nuevoStockBotella, matchBotella.id_producto]);
         await dbRun(
           `INSERT INTO movimiento_stock (id_producto, id_admin, tipo_movimiento, cantidad, stock_anterior, stock_nuevo, motivo, fecha_hora)
            VALUES (?, ?, 'SALIDA', ?, ?, ?, ?, ?)`,
-          [matchBotella.id_producto, req.body.id_admin || null, botellasADeducir, matchBotella.stock_actual, Math.max(0, matchBotella.stock_actual - botellasADeducir), `Descuento de botella por venta de vasos comanda #${idComanda}`, nowStr]
+          [matchBotella.id_producto, req.body.id_admin || null, botellasADeducir, matchBotella.stock_actual, nuevoStockBotella, `Venta comanda #${idComanda} (${cant} vaso(s) de ${prod.nombre} -${botellasADeducir} bot.)`, nowStr]
+        );
+        await dbRun(
+          `INSERT INTO movimiento_stock (id_producto, id_admin, tipo_movimiento, cantidad, stock_anterior, stock_nuevo, motivo, fecha_hora)
+           VALUES (?, NULL, 'SALIDA', ?, ?, ?, ?, ?)`,
+          [idProd, cant, prod.stock_actual, prod.stock_actual, `Venta comanda #${idComanda}`, nowStr]
+        );
+      } else {
+        const upd = await dbRun(
+          `UPDATE producto SET stock_actual = stock_actual - ?
+           WHERE id_producto = ? AND stock_actual >= ?`,
+          [cant, idProd, cant]
+        );
+        if (upd.affectedRows === 0) {
+          throw new BusinessError(
+            `No se pudo reservar el stock de ${prod.nombre}: ya no quedan unidades suficientes.`
+          );
+        }
+        await dbRun(
+          `INSERT INTO movimiento_stock (id_producto, id_admin, tipo_movimiento, cantidad, stock_anterior, stock_nuevo, motivo, fecha_hora)
+           VALUES (?, NULL, 'SALIDA', ?, ?, ?, ?, ?)`,
+          [idProd, cant, prod.stock_actual, prod.stock_actual - cant, `Venta comanda #${idComanda}`, nowStr]
         );
       }
     }
@@ -3501,55 +3506,80 @@ app.post('/api/admin/comandas/anular', (req, res) => {
     await dbRun("UPDATE pago_comanda SET estado = 'ANULADO' WHERE id_comanda = ?", [id_comanda]);
 
     for (const det of detalles) {
-      await dbRun('UPDATE producto SET stock_actual = stock_actual + ? WHERE id_producto = ?', [
-        det.cantidad,
-        det.id_producto
-      ]);
-      const after = await dbGet('SELECT id_producto, nombre, stock_actual, id_categoria, id_botella_vinculada, vasos_por_botella FROM producto WHERE id_producto = ?', [det.id_producto]);
-      await dbRun(
-        `INSERT INTO movimiento_stock (id_producto, id_admin, tipo_movimiento, cantidad, stock_anterior, stock_nuevo, motivo, fecha_hora)
-         VALUES (?, ?, 'ENTRADA', ?, ?, ?, ?, ?)`,
-        [
-          det.id_producto,
-          id_admin,
-          det.cantidad,
-          after.stock_actual - det.cantidad,
-          after.stock_actual,
-          `Devolución por anulación de comanda #${id_comanda}`,
-          nowSql()
-        ]
-      );
+      const prod = await dbGet('SELECT id_producto, nombre, stock_actual, id_categoria, id_botella_vinculada, vasos_por_botella FROM producto WHERE id_producto = ?', [det.id_producto]);
 
-      // Devolución de botella vinculada si fue venta de vasos / shots
-      if (after) {
-        let matchBotella = null;
-        if (after.id_botella_vinculada) {
-          matchBotella = await dbGet('SELECT id_producto, nombre, stock_actual FROM producto WHERE id_producto = ? AND activo = 1', [after.id_botella_vinculada]);
+      if (prod && prod.id_botella_vinculada) {
+        let matchBotella = await dbGet('SELECT id_producto, nombre, stock_actual FROM producto WHERE id_producto = ? AND activo = 1', [prod.id_botella_vinculada]);
+        const vasosPorBotella = Math.max(1, parseInt(prod.vasos_por_botella || 10, 10));
+        const botellasADevolver = round2(det.cantidad / vasosPorBotella);
+        if (matchBotella) {
+          const nuevoStockBotella = round2(matchBotella.stock_actual + botellasADevolver);
+          await dbRun('UPDATE producto SET stock_actual = ? WHERE id_producto = ?', [nuevoStockBotella, matchBotella.id_producto]);
+          await dbRun(
+            `INSERT INTO movimiento_stock (id_producto, id_admin, tipo_movimiento, cantidad, stock_anterior, stock_nuevo, motivo, fecha_hora)
+             VALUES (?, ?, 'ENTRADA', ?, ?, ?, ?, ?)`,
+            [matchBotella.id_producto, id_admin || null, botellasADevolver, matchBotella.stock_actual, nuevoStockBotella, `Devolución de botella por anulación comanda #${id_comanda} (${det.cantidad} vaso(s) = +${botellasADevolver} bot.)`, nowSql()]
+          );
         }
-        if (!matchBotella) {
+        await dbRun(
+          `INSERT INTO movimiento_stock (id_producto, id_admin, tipo_movimiento, cantidad, stock_anterior, stock_nuevo, motivo, fecha_hora)
+           VALUES (?, ?, 'ENTRADA', ?, ?, ?, ?, ?)`,
+          [
+            prod.id_producto,
+            id_admin,
+            det.cantidad,
+            prod.stock_actual,
+            prod.stock_actual,
+            `Devolución por anulación de comanda #${id_comanda}`,
+            nowSql()
+          ]
+        );
+      } else {
+        await dbRun('UPDATE producto SET stock_actual = stock_actual + ? WHERE id_producto = ?', [
+          det.cantidad,
+          det.id_producto
+        ]);
+        const after = await dbGet('SELECT id_producto, nombre, stock_actual, id_categoria, id_botella_vinculada, vasos_por_botella FROM producto WHERE id_producto = ?', [det.id_producto]);
+        await dbRun(
+          `INSERT INTO movimiento_stock (id_producto, id_admin, tipo_movimiento, cantidad, stock_anterior, stock_nuevo, motivo, fecha_hora)
+           VALUES (?, ?, 'ENTRADA', ?, ?, ?, ?, ?)`,
+          [
+            det.id_producto,
+            id_admin,
+            det.cantidad,
+            round2(after.stock_actual - det.cantidad),
+            after.stock_actual,
+            `Devolución por anulación de comanda #${id_comanda}`,
+            nowSql()
+          ]
+        );
+
+        // Fallback para productos antiguos vaso/shot sin id_botella_vinculada explícita
+        if (after) {
           const catProd = after.id_categoria ? await dbGet('SELECT nombre FROM categoria_producto WHERE id_categoria = ?', [after.id_categoria]) : null;
           const esVasoOShot = (catProd && /vaso|shot/i.test(catProd.nombre)) || /vaso|shot/i.test(after.nombre);
           if (esVasoOShot) {
             const busquedaBotella = after.nombre.replace(/vaso|shot|de\s+|medida\s+/gi, '').trim();
             if (busquedaBotella.length >= 3) {
-              matchBotella = await dbGet(
+              const matchBotella = await dbGet(
                 `SELECT id_producto, nombre, stock_actual FROM producto 
                  WHERE activo = 1 AND id_producto != ? AND LOWER(nombre) LIKE ? AND stock_actual >= 0 
                  ORDER BY stock_actual DESC LIMIT 1`,
                 [det.id_producto, '%' + busquedaBotella.toLowerCase() + '%']
               );
+              if (matchBotella) {
+                const vasosPorBotella = Math.max(1, parseInt(after.vasos_por_botella || 10, 10));
+                const botellasADevolver = round2(det.cantidad / vasosPorBotella);
+                const nuevoStockBotella = round2(matchBotella.stock_actual + botellasADevolver);
+                await dbRun('UPDATE producto SET stock_actual = ? WHERE id_producto = ?', [nuevoStockBotella, matchBotella.id_producto]);
+                await dbRun(
+                  `INSERT INTO movimiento_stock (id_producto, id_admin, tipo_movimiento, cantidad, stock_anterior, stock_nuevo, motivo, fecha_hora)
+                   VALUES (?, ?, 'ENTRADA', ?, ?, ?, ?, ?)`,
+                  [matchBotella.id_producto, id_admin || null, botellasADevolver, matchBotella.stock_actual, nuevoStockBotella, `Devolución de botella por anulación comanda #${id_comanda}`, nowSql()]
+                );
+              }
             }
           }
-        }
-        if (matchBotella) {
-          const vasosPorBotella = after.vasos_por_botella || 10;
-          const botellasADevolver = Math.max(1, Math.ceil(det.cantidad / vasosPorBotella));
-          await dbRun('UPDATE producto SET stock_actual = stock_actual + ? WHERE id_producto = ?', [botellasADevolver, matchBotella.id_producto]);
-          await dbRun(
-            `INSERT INTO movimiento_stock (id_producto, id_admin, tipo_movimiento, cantidad, stock_anterior, stock_nuevo, motivo, fecha_hora)
-             VALUES (?, ?, 'ENTRADA', ?, ?, ?, ?, ?)`,
-            [matchBotella.id_producto, id_admin || null, botellasADevolver, matchBotella.stock_actual, matchBotella.stock_actual + botellasADevolver, `Devolución de botella por anulación comanda #${id_comanda}`, nowSql()]
-          );
         }
       }
     }
@@ -3766,9 +3796,9 @@ app.post('/api/admin/stock/movimiento', (req, res) => {
       throw new BusinessError('Tipo de movimiento no válido.');
     }
 
-    const cant = Number(cantidad);
-    if (!Number.isFinite(cant) || !Number.isInteger(cant) || cant < 0) {
-      throw new BusinessError('La cantidad debe ser un número entero de 0 o más.');
+    const cant = round2(Number(cantidad));
+    if (!Number.isFinite(cant) || cant < 0) {
+      throw new BusinessError('La cantidad debe ser un número de 0 o más.');
     }
     if (tipo !== 'AJUSTE' && cant === 0) {
       throw new BusinessError('La cantidad tiene que ser mayor que cero.');
@@ -3782,8 +3812,8 @@ app.post('/api/admin/stock/movimiento', (req, res) => {
 
     const prevStock = prod.stock_actual;
     let newStock = prevStock;
-    if (tipo === 'ENTRADA') newStock = prevStock + cant;
-    else if (tipo === 'SALIDA') newStock = Math.max(0, prevStock - cant);
+    if (tipo === 'ENTRADA') newStock = round2(prevStock + cant);
+    else if (tipo === 'SALIDA') newStock = round2(Math.max(0, prevStock - cant));
     else newStock = cant;
 
     await dbRun('UPDATE producto SET stock_actual = ? WHERE id_producto = ?', [newStock, id_producto]);
@@ -3791,7 +3821,7 @@ app.post('/api/admin/stock/movimiento', (req, res) => {
     await dbRun(
       `INSERT INTO movimiento_stock (id_producto, id_admin, tipo_movimiento, cantidad, stock_anterior, stock_nuevo, motivo, fecha_hora)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id_producto, id_admin, tipo, Math.abs(newStock - prevStock), prevStock, newStock, motivo, nowSql()]
+      [id_producto, id_admin, tipo, round2(Math.abs(newStock - prevStock)), prevStock, newStock, motivo, nowSql()]
     );
 
     await dbRun(
