@@ -6255,50 +6255,65 @@ select option {
     padding: 10px 12px !important;
 }
 
-.btn-fullscreen-topleft {
+.btn-fullscreen-topleft,
+.btn-fullscreen-topright {
     position: absolute;
     top: 20px;
-    left: 20px;
     z-index: 30;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
+    justify-content: center;
+    min-width: 42px;
+    height: 42px;
+    padding: 0 10px;
     background: #ffffff !important;
     color: #000000 !important;
     border: 2px solid #000000 !important;
     border-radius: 12px !important;
     box-shadow: 3px 3px 0px #000000 !important;
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-weight: 700;
-    font-size: 0.86rem;
+    font-size: 1.2rem !important;
+    font-weight: 800 !important;
     cursor: pointer;
     transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.2s ease;
     user-select: none;
+    line-height: 1;
 }
 
-.btn-fullscreen-topleft:hover {
+.btn-fullscreen-topleft {
+    left: 20px;
+}
+
+.btn-fullscreen-topright {
+    right: 20px;
+}
+
+.btn-fullscreen-topleft:hover,
+.btn-fullscreen-topright:hover {
     background-color: #f8fafc !important;
     box-shadow: 2px 2px 0px #000000 !important;
     transform: translate(1px, 1px);
 }
 
-.btn-fullscreen-topleft:active {
+.btn-fullscreen-topleft:active,
+.btn-fullscreen-topright:active {
     box-shadow: 0px 0px 0px #000000 !important;
     transform: translate(3px, 3px);
-}
-
-.btn-fullscreen-topleft .fs-icon {
-    font-size: 1.1rem;
-    line-height: 1;
 }
 
 @media (max-width: 480px) {
     .btn-fullscreen-topleft {
         top: 12px;
         left: 12px;
-        padding: 6px 12px;
-        font-size: 0.78rem;
+        min-width: 36px;
+        height: 36px;
+        font-size: 1rem !important;
+    }
+    .btn-fullscreen-topright {
+        top: 12px;
+        right: 12px;
+        min-width: 36px;
+        height: 36px;
+        font-size: 1rem !important;
     }
 }
 
@@ -6366,6 +6381,35 @@ select option {
     -webkit-text-stroke: 0.5px #000000;
     display: inline-block;
     line-height: 1;
+}
+
+.pos-fs-btn {
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: 2px solid #000000 !important;
+    border-radius: 12px !important;
+    padding: 5px 9px !important;
+    font-size: 1.05rem !important;
+    font-weight: 800 !important;
+    cursor: pointer !important;
+    box-shadow: 2px 2px 0px #000000 !important;
+    transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.15s ease !important;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+}
+
+.pos-fs-btn:hover {
+    background-color: #f4f4f5 !important;
+    box-shadow: 3px 3px 0px #000000 !important;
+    transform: translate(-1px, -1px) !important;
+}
+
+.pos-fs-btn:active {
+    box-shadow: 0px 0px 0px #000000 !important;
+    transform: translate(2px, 2px) !important;
 }
 
 .pos-user-chip {

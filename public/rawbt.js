@@ -418,13 +418,13 @@ window.ThermalPrinter = (function () {
     const ops = buildHeaderOps(model, settings, 'COPIA CAJERO');
 
     if (model.fechaDia && model.hora) {
-      ops.push(op(padPair(model.fechaDia + ' ' + model.hora, 'Caj: ' + (model.cajero || ''), w)));
+      ops.push(op(padPair(model.fechaDia + ' ' + model.hora, 'Cajero: ' + (model.cajero || ''), w)));
     } else {
-      ops.push(op(padPair(model.fecha || '', 'Caj: ' + (model.cajero || ''), w)));
+      ops.push(op(padPair(model.fecha || '', 'Cajero: ' + (model.cajero || ''), w)));
     }
     if (model.mesero) {
       const pinInfo = (model.meseroPin || model.meseroCodigo) ? ' (' + (model.meseroPin || model.meseroCodigo) + ')' : '';
-      ops.push(op(padPair('Mesero: ' + model.mesero + pinInfo, '', w)));
+      ops.push(op(padPair('Mesero: ' + model.mesero + pinInfo, '', w), { bold: true }));
     }
 
     ops.push(op(divider(w)));
@@ -444,9 +444,9 @@ window.ThermalPrinter = (function () {
     ops.push(op(divider(w)));
 
     function emitirFilaCajero(cant, nombre, precio, total, isChild, isPromoChild, isPromoParent) {
-      const cantStr = isPromoChild ? '  └> ' : (isChild ? '  └> x' : 'x') + cant;
-      const precioStr = precio != null && precio !== '' && precio !== 0 ? money(precio) : '-';
-      const totalStr = total != null && total !== '' && total !== 0 ? money(total) : '-';
+      const cantStr = isPromoChild ? '     ' : (isChild ? '   x' : 'x') + cant;
+      const precioStr = money(precio);
+      const totalStr = money(total);
       const cantCol = cantStr.padEnd(wCant);
       const remNameWidth = Math.max(8, w - wCant - wPrecio - wTotal);
 
@@ -520,7 +520,7 @@ window.ThermalPrinter = (function () {
     const ops = buildHeaderOps(model, settings, 'BARRA');
 
     const pinInfo = (model.meseroPin || model.meseroCodigo) ? ' (' + (model.meseroPin || model.meseroCodigo) + ')' : '';
-    ops.push(op(padPair('Mesero: ' + model.mesero + pinInfo, model.hora || '', w)));
+    ops.push(op(padPair('Mesero: ' + model.mesero + pinInfo, model.hora || '', w), { bold: true }));
     ops.push(op(divider(w)));
 
     const wCantM = w >= 40 ? 8 : 7;
@@ -537,9 +537,9 @@ window.ThermalPrinter = (function () {
     ops.push(op(divider(w)));
 
     function emitirFilaMesero(cant, nombre, precio, total, isChild, isPromoChild, isPromoParent) {
-      const cantStr = isPromoChild ? '  └> ' : (isChild ? '  └> x' : 'x') + cant;
-      const precioStr = precio != null && precio !== '' && precio !== 0 ? money(precio) : '-';
-      const totalStr = total != null && total !== '' && total !== 0 ? money(total) : '-';
+      const cantStr = isPromoChild ? '     ' : (isChild ? '   x' : 'x') + cant;
+      const precioStr = money(precio);
+      const totalStr = money(total);
       const cantCol = cantStr.padEnd(wCantM);
       const remNameWidth = Math.max(8, w - wCantM - wPrecioM - wTotalM);
 

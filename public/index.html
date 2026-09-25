@@ -33,10 +33,7 @@
     <!-- 1. GENERAL LOGIN VIEW -->
     <main id="login-view" class="auth-container">
         <!-- Botón de Pantalla Completa en la parte superior izquierda -->
-        <button type="button" id="btn-toggle-fullscreen" class="btn-fullscreen-topleft" title="Pantalla Completa">
-            <span class="fs-icon">⛶</span>
-            <span class="fs-text">Pantalla Completa</span>
-        </button>
+        <button type="button" id="btn-toggle-fullscreen" class="btn-fullscreen-topleft" title="Pantalla Completa">⛶</button>
 
         <div class="glass-card auth-card">
             <header class="auth-header">
@@ -94,6 +91,9 @@
          (ver pintarTemaDelAfiche en app.js). Todo lo demás es negro y blanco,
          que es lo que deja que el cartel mande. -->
     <div id="waiter-lock-modal" class="modal-overlay pantalla-pin hide">
+        <!-- Botón de Pantalla Completa en la parte superior derecha -->
+        <button type="button" id="waiter-fullscreen-btn" class="btn-fullscreen-topright" title="Pantalla Completa">⛶</button>
+
         <div class="pin-escena">
 
             <!-- ---------- Izquierda: el cartel ---------- -->
@@ -219,7 +219,10 @@
             <!-- Center Panel: Products Grid -->
             <main class="pos-main">
                 <div class="pos-top-bar">
-                    <h1 class="pos-event-heading" id="pos-event-title">Chivas</h1>
+                    <div style="display: inline-flex; align-items: center; gap: 12px;">
+                        <button type="button" id="pos-fullscreen-btn" class="pos-fs-btn" title="Pantalla Completa">⛶</button>
+                        <h1 class="pos-event-heading" id="pos-event-title">Chivas</h1>
+                    </div>
                     <div class="pos-user-chip" id="pos-user-chip">
                         <span class="user-chip-icon">👤</span>
                         <span id="pos-user-chip-name">Andrés Rodríguez</span>

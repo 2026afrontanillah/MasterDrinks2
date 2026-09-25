@@ -8998,6 +8998,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     // MODO PANTALLA COMPLETA PERSISTENTE (TABLETS)
     // ==========================================
+    function toggleFullscreen() {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+            localStorage.setItem('pwa_fullscreen', '1');
+            const docEl = document.documentElement;
+            if (docEl.requestFullscreen) docEl.requestFullscreen().catch(() => {});
+            else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
+        } else {
+            localStorage.setItem('pwa_fullscreen', '0');
+            if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+            else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+        }
+    }
+
     function asegurarPantallaCompleta() {
         if (localStorage.getItem('pwa_fullscreen') === '1') {
             if (!document.fullscreenElement && !document.webkitFullscreenElement) {
@@ -9008,50 +9021,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    const btnFullscreen = document.getElementById('btn-toggle-fullscreen');
     function actualizarBotonFullscreen() {
-        if (!btnFullscreen) return;
-        const textEl = btnFullscreen.querySelector('.fs-text');
-        const iconEl = btnFullscreen.querySelector('.fs-icon');
         const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
-        if (textEl) textEl.textContent = isFs ? 'Salir de Pantalla Completa' : 'Pantalla Completa';
-        if (iconEl) iconEl.textContent = isFs ? '✕' : '⛶';
-    }
-
-    if (btnFullscreen) {
-        btnFullscreen.addEventListener('click', () => {
-            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-                localStorage.setItem('pwa_fullscreen', '1');
-                const docEl = document.documentElement;
-                if (docEl.requestFullscreen) docEl.requestFullscreen().catch(() => {});
-                else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
-            } else {
-                localStorage.setItem('pwa_fullscreen', '0');
-                if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
-                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-            }
-        });
-
-        document.addEventListener('fullscreenchange', actualizarBotonFullscreen);
-        document.addEventListener('webkitfullscreenchange', actualizarBotonFullscreen);
-        actualizarBotonFullscreen();
-    }
-
-    const adminFsBtn = document.getElementById('admin-fullscreen-btn');
-    if (adminFsBtn) {
-        adminFsBtn.addEventListener('click', () => {
-            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-                localStorage.setItem('pwa_fullscreen', '1');
-                const docEl = document.documentElement;
-                if (docEl.requestFullscreen) docEl.requestFullscreen().catch(() => {});
-                else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
-            } else {
-                localStorage.setItem('pwa_fullscreen', '0');
-                if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
-                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-            }
+        ['btn-toggle-fullscreen', 'waiter-fullscreen-btn', 'admin-fullscreen-btn', 'pos-fullscreen-btn'].forEach(id => {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            btn.textContent = isFs ? '✕' : '⛶';
+            btn.title = isFs ? 'Salir de Pantalla Completa' : 'Pantalla Completa';
         });
     }
+
+    ['btn-toggle-fullscreen', 'waiter-fullscreen-btn', 'admin-fullscreen-btn', 'pos-fullscreen-btn'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) {
+            btn.addEventListener('click', toggleFullscreen);
+        }
+    });
+
+    document.addEventListener('fullscreenchange', actualizarBotonFullscreen);
+    document.addEventListener('webkitfullscreenchange', actualizarBotonFullscreen);
+    actualizarBotonFullscreen();
 
     // Auto-activar o restaurar pantalla completa en interacciones clave
     ['waiter-lock-modal', 'pos-view', 'admin-view'].forEach(id => {
