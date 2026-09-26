@@ -122,7 +122,8 @@ window.ThermalPrinter = (function () {
     singleJob: true,    // los dos tickets en un solo trabajo de impresión
     cut: true,          // enviar corte de papel al final de cada ticket
     feed: 0,            // corte ajustado sin desperdicio de papel
-    autoPrint: true
+    autoPrint: true,
+    showPreview: false  // false = impresión directa sin modal de vista previa al cobrar
   };
 
   function getSettings() {
@@ -764,10 +765,14 @@ window.ThermalPrinter = (function () {
     const w = settings.width;
     const ops = [];
 
+    if (settings.printLogo && logoTicketUrl) {
+      ops.push(op('LOGO', { isLogo: true, align: 'center' }));
+    }
+
     const saliendo = model.tipo !== 'ENTRADA';
 
     ops.push(op(rule(w)));
-    ops.push(op(saliendo ? 'TRASPASO' : 'INGRESO',
+    ops.push(op(saliendo ? 'TRASPASO' : (model.motivo === 'COMPRA' ? 'COMPRA / ENTRADA' : 'INGRESO'),
       { align: 'center', bold: true, tall: true, wide: true }));
     if (model.barra) ops.push(op(model.barra, { align: 'center', bold: true }));
     ops.push(op(rule(w)));
@@ -787,7 +792,7 @@ window.ThermalPrinter = (function () {
     ops.push(op(''));
 
     ops.push(op(padPair(model.fecha || '', model.hora || '', w)));
-    if (model.responsable) kv('Entrega', model.responsable, w).forEach(l => ops.push(op(l)));
+    if (model.responsable) kv(saliendo ? 'Entrega' : 'Recibe', model.responsable, w).forEach(l => ops.push(op(l)));
 
     ops.push(op(''));
     ops.push(op(sectionTitle(saliendo ? 'ENTREGAR' : 'RECIBIDO', w), { bold: true }));
@@ -908,6 +913,40 @@ window.ThermalPrinter = (function () {
     win.document.close();
   }
 
+  function printOpsViaBrowser(ops, settings, titulo) {
+    settings = settings || getSettings();
+    const maxMm = settings.width >= 48 ? '78mm' : '58mm';
+    const html = opsToHtml(ops, settings);
+
+    const win = window.open('', '_blank');
+    if (!win) {
+      alert('El navegador bloqueó la ventana de impresión. Permite las ventanas emergentes.');
+      return;
+    }
+
+    win.document.write(
+      '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + (titulo || 'Voucher') + '</title><style>' +
+      '@page { size: auto; margin: 0mm; }' +
+      '* { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
+      'html, body { margin: 0; padding: 0; background: #fff; color: #000; width: 100%; }' +
+      'body { display: flex; flex-direction: column; align-items: center; justify-content: flex-start;' +
+      ' font-family: "Courier New", Courier, "Lucida Console", monospace; font-size: 13.5px; font-weight: 600; line-height: 1.28; }' +
+      '.ticket { width: 100%; max-width: ' + maxMm + '; margin: 0 auto; padding: 4mm 2mm 8mm 2mm;' +
+      ' page-break-after: always; page-break-inside: avoid; }' +
+      '.ticket:last-child { page-break-after: auto; }' +
+      '.ticket div { white-space: pre-wrap; word-break: break-word; font-family: inherit; }' +
+      '@media print {' +
+      '  body { width: 100%; margin: 0; padding: 0; display: block; }' +
+      '  .ticket { margin: 0 auto; width: 100%; max-width: ' + maxMm + '; padding: 2mm 1mm 6mm 1mm; }' +
+      '}' +
+      '</style></head><body>' +
+      '<div class="ticket">' + html + '</div>' +
+      '<script>window.onload=function(){window.print();setTimeout(function(){window.close();},300);};<\/script>' +
+      '</body></html>'
+    );
+    win.document.close();
+  }
+
   return {
     getSettings: getSettings,
     saveSettings: saveSettings,
@@ -917,6 +956,7 @@ window.ThermalPrinter = (function () {
     renderText: renderText,
     printToRawBT: printToRawBT,
     printViaBrowser: printViaBrowser,
+    printOpsViaBrowser: printOpsViaBrowser,
     setLogoUrl: setLogoUrl,
     getLogoUrl: getLogoUrl,
     prepararLogoRaster: prepararLogoRaster,

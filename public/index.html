@@ -21,7 +21,7 @@
     <link rel="stylesheet" href="fonts.css?v=123">
 
     <!-- Main Stylesheet -->
-    <link rel="stylesheet" href="style.css?v=133">
+    <link rel="stylesheet" href="style.css?v=136">
 </head>
 
 <body>
@@ -1422,6 +1422,13 @@
                                         <option value="0">No cortar</option>
                                     </select>
                                 </div>
+                                <div class="form-group">
+                                    <label for="cfg-preview">Vista previa al cobrar</label>
+                                    <select id="cfg-preview">
+                                        <option value="0" selected>Impresión directa (sin vista previa)</option>
+                                        <option value="1">Mostrar vista previa de tickets</option>
+                                    </select>
+                                </div>
                             </div>
                             <p class="printer-hint">
                                 Conecta la impresora a la tablet por cable USB OTG y ábrela una vez en
@@ -1493,8 +1500,9 @@
                 </div>
             </div>
             <div class="print-actions">
-                <button id="traspaso-imprimir" class="primary-btn">🖨️ Imprimir</button>
-                <button id="traspaso-cerrar" class="secondary-btn">Cerrar</button>
+                <button type="button" id="traspaso-imprimir" class="primary-btn" style="min-width: 140px; font-weight: 700;">🖨️ Re-imprimir</button>
+                <button type="button" id="traspaso-navegador" class="secondary-btn">📄 Por navegador</button>
+                <button type="button" id="traspaso-cerrar" class="secondary-btn" style="min-width: 110px;">Listo / Cerrar</button>
             </div>
         </div>
     </div>
@@ -1996,13 +2004,13 @@
             </div>
 
             <div class="form-group" style="margin: 0;">
-                <label for="sam-reason">Motivo</label>
-                <input type="text" id="sam-reason" placeholder="Ej. Compra / Abastecimiento" required>
+                <label for="sam-reason">Motivo / Destino u Origen</label>
+                <input type="text" id="sam-reason" placeholder="Ej. Mandado a Barra 2 / Compra / Merma" required>
             </div>
 
             <div class="modal-actions" style="display: flex; gap: 10px; margin-top: 4px;">
                 <button type="button" id="sam-cancel-btn" class="secondary-btn full-btn">Cancelar</button>
-                <button type="button" id="sam-confirm-btn" class="primary-btn full-btn">Guardar Movimiento</button>
+                <button type="button" id="sam-confirm-btn" class="primary-btn full-btn" style="font-weight: 700;">🖨️ Guardar e Imprimir Voucher</button>
             </div>
         </div>
     </div>
@@ -2030,6 +2038,7 @@
                             <th>Responsable</th>
                             <th>Fecha</th>
                             <th>Motivo</th>
+                            <th>Voucher</th>
                         </tr>
                     </thead>
                     <tbody id="shm-table-body">
@@ -2172,11 +2181,11 @@
     <div id="toast-stack" class="toast-stack" aria-live="polite"></div>
 
     <!-- Impresión térmica (ESC/POS + RawBT) -->
-    <script src="rawbt.js?v=123"></script>
+    <script src="rawbt.js?v=137"></script>
     <!-- Deep Neural Face Recognition Library (100% Offline Local) -->
     <script src="js/face-api.js"></script>
     <!-- Main Client-side logic script -->
-    <script src="app.js?v=134"></script>
+    <script src="app.js?v=137"></script>
 
     <!-- PWA Service Worker Registration -->
     <script>

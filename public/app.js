@@ -2076,20 +2076,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // La comanda del traspaso: la misma vista previa y la misma impresora que
-    // los tickets de venta, para que el bartender vea siempre el mismo papel.
-    function imprimirTraspaso(data) {
+    // La comanda del traspaso: imprime el voucher térmico y gestiona la vista previa
+    function imprimirTraspaso(data, forzarModal = false) {
         const ahora = new Date();
         const dos = n => String(n).padStart(2, '0');
+        let fecha = dos(ahora.getDate()) + '/' + dos(ahora.getMonth() + 1) + '/' + ahora.getFullYear();
+        let hora = dos(ahora.getHours()) + ':' + dos(ahora.getMinutes());
+        if (data.fecha_hora) {
+            const d = new Date(data.fecha_hora.replace(' ', 'T'));
+            if (!isNaN(d.getTime())) {
+                fecha = dos(d.getDate()) + '/' + dos(d.getMonth() + 1) + '/' + d.getFullYear();
+                hora = dos(d.getHours()) + ':' + dos(d.getMinutes());
+            } else {
+                fecha = data.fecha_hora;
+                hora = '';
+            }
+        }
+
         const modelo = {
             id: data.id_traspaso,
             tipo: data.tipo,
             motivo: data.motivo,
-            barra: configEvento.barra || instancia.nombre || 'Barra',
+            barra: (typeof configEvento !== 'undefined' && configEvento.barra) || (typeof instancia !== 'undefined' && instancia.nombre) || 'Barra',
             contraparte: data.contraparte,
-            fecha: dos(ahora.getDate()) + '/' + dos(ahora.getMonth() + 1) + '/' + ahora.getFullYear(),
-            hora: dos(ahora.getHours()) + ':' + dos(ahora.getMinutes()),
-            responsable: currentUser ? currentUser.nombre : '',
+            fecha: fecha,
+            hora: hora,
+            responsable: data.cajero || data.admin || (currentUser ? currentUser.nombre : ''),
             observaciones: data.observaciones || '',
             items: data.items || []
         };
@@ -2098,9 +2110,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const ops = ThermalPrinter.buildTraspasoOps(modelo, ajustes);
 
         traspasoParaImprimir = { ops: ops, modelo: modelo };
-        document.getElementById('traspaso-body').innerHTML =
-            ThermalPrinter.helpers.opsToHtml(ops, ajustes);
-        document.getElementById('traspaso-modal').classList.remove('hide');
+        const bodyTraspaso = document.getElementById('traspaso-body');
+        if (bodyTraspaso) {
+            bodyTraspaso.innerHTML = ThermalPrinter.helpers.opsToHtml(ops, ajustes);
+        }
+
+        // Envío directo del voucher a la impresora térmica (RawBT)
+        try {
+            ThermalPrinter.printOps(ops, ajustes);
+            notify('Voucher de ' + (data.tipo === 'SALIDA' ? 'traspaso' : 'ingreso') + ' #' + data.id_traspaso + ' enviado a la impresora.', 'ok');
+        } catch (err) {
+            console.error('Error al imprimir voucher de traspaso:', err);
+            notify('No se pudo imprimir en RawBT: ' + (err.message || 'revisa la impresora'), 'error');
+        }
+
+        // Si la vista previa de tickets está activada en configuración o se pide forzar vista (reimpresión manual)
+        if (ajustes.showPreview || forzarModal) {
+            document.getElementById('traspaso-modal').classList.remove('hide');
+        }
     }
 
     let traspasoParaImprimir = null;
@@ -2159,11 +2186,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!traspasoParaImprimir) return;
         try {
             ThermalPrinter.printOps(traspasoParaImprimir.ops);
-            notify('Enviado a la impresora.', 'ok');
+            notify('Voucher enviado a la impresora.', 'ok');
         } catch (err) {
             notify('No se pudo imprimir: ' + (err.message || 'revisa RawBT'), 'error');
         }
     });
+
+    const btnTraspasoNav = document.getElementById('traspaso-navegador');
+    if (btnTraspasoNav) {
+        btnTraspasoNav.addEventListener('click', () => {
+            if (!traspasoParaImprimir) return;
+            const titulo = (traspasoParaImprimir.modelo?.tipo === 'SALIDA' ? 'Traspaso #' : 'Ingreso #') + (traspasoParaImprimir.modelo?.id || '');
+            ThermalPrinter.printOpsViaBrowser(traspasoParaImprimir.ops, null, titulo);
+        });
+    }
 
     // ==========================================
     // MENÚ LATERAL PLEGABLE (ESTE TURNO / MERCANCÍA)
@@ -3552,11 +3588,25 @@ document.addEventListener('DOMContentLoaded', () => {
         renderTicketPreview(currentTicket);
         setPrintStatus('');
 
-        const printModal = document.getElementById('print-modal');
-        if (printModal) {
-            printModal.classList.remove('hide');
+        const settings = ThermalPrinter.getSettings();
+        // Al vender desde el carrito la impresión es DIRECTA (sin vista previa).
+        // Solo se abre el modal si se solicita expresamente desde el panel de admin
+        // o si se activó explícitamente la vista previa en la configuración de impresora.
+        const mostrarPreview = fromAdmin || Boolean(settings.showPreview);
+
+        if (mostrarPreview) {
+            const printModal = document.getElementById('print-modal');
+            if (printModal) {
+                printModal.classList.remove('hide');
+            }
         }
+
         sendToPrinter();
+
+        if (!mostrarPreview) {
+            currentTicket = null;
+            volverAlBloqueoDeMesero();
+        }
     }
 
     function cerrarVistaPreviaTicket() {
@@ -3615,11 +3665,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const printerSettingsPanel = document.getElementById('printer-settings');
 
     const settingsFields = {
-        'cfg-width':    { key: 'width',     parse: v => parseInt(v, 10) },
-        'cfg-encoding': { key: 'encoding',  parse: v => v },
-        'cfg-mode':     { key: 'mode',      parse: v => v },
-        'cfg-single':   { key: 'singleJob', parse: v => v === '1' },
-        'cfg-cut':      { key: 'cut',       parse: v => v === '1' }
+        'cfg-width':    { key: 'width',       parse: v => parseInt(v, 10) },
+        'cfg-encoding': { key: 'encoding',    parse: v => v },
+        'cfg-mode':     { key: 'mode',        parse: v => v },
+        'cfg-single':   { key: 'singleJob',   parse: v => v === '1' },
+        'cfg-cut':      { key: 'cut',         parse: v => v === '1' },
+        'cfg-preview':  { key: 'showPreview', parse: v => v === '1' }
     };
 
     function loadPrinterSettingsIntoForm() {
@@ -7373,6 +7424,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('ingreso-unidades').value = '';
             cargarTraspasos();
             loadStockSetup();
+            imprimirTraspaso(data);
         } catch (err) {
             notify('Sin conexión con el servidor. Revisa el WiFi.', 'error');
         } finally {
@@ -7446,6 +7498,33 @@ document.addEventListener('DOMContentLoaded', () => {
             ins.className = 'lista-insignia';
             ins.textContent = t.unidades + (t.unidades === 1 ? ' unidad' : ' unidades');
             fila.appendChild(ins);
+
+            const btnVoucher = document.createElement('button');
+            btnVoucher.className = 'btn-traspaso-voucher';
+            btnVoucher.type = 'button';
+            btnVoucher.title = 'Ver / Reimprimir voucher';
+            btnVoucher.innerHTML = '🖨️ Voucher';
+            btnVoucher.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                btnVoucher.disabled = true;
+                try {
+                    const res = await fetch('/api/traspaso/' + t.id_traspaso);
+                    const det = await res.json();
+                    if (det && det.success && det.traspaso) {
+                        imprimirTraspaso({
+                            ...det.traspaso,
+                            items: det.items || []
+                        }, true);
+                    } else {
+                        notify(det.message || 'No se pudo leer el detalle del traspaso.', 'error');
+                    }
+                } catch (err) {
+                    notify('Error al obtener voucher: ' + err.message, 'error');
+                } finally {
+                    btnVoucher.disabled = false;
+                }
+            });
+            fila.appendChild(btnVoucher);
 
             caja.appendChild(fila);
         });
@@ -7858,13 +7937,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (type === 'ENTRADA') {
             if (label) label.textContent = 'Cantidad a ingresar (sumar)';
-            if (reasonInput && !reasonInput.value) reasonInput.value = 'Compra / Abastecimiento';
+            if (reasonInput && (!reasonInput.value || reasonInput.value === 'Merma / Botella rota' || reasonInput.value === 'Conteo físico de inventario' || reasonInput.value === 'Traspaso a otra barra')) {
+                reasonInput.value = 'Compra / Recibido de otra barra';
+            }
         } else if (type === 'SALIDA') {
             if (label) label.textContent = 'Cantidad a retirar (restar)';
-            if (reasonInput && !reasonInput.value) reasonInput.value = 'Merma / Botella rota';
+            if (reasonInput && (!reasonInput.value || reasonInput.value === 'Compra / Abastecimiento' || reasonInput.value === 'Conteo físico de inventario' || reasonInput.value === 'Compra / Recibido de otra barra')) {
+                reasonInput.value = 'Traspaso a otra barra';
+            }
         } else if (type === 'AJUSTE') {
             if (label) label.textContent = 'Nuevo stock total exacto';
-            if (reasonInput && !reasonInput.value) reasonInput.value = 'Conteo físico de inventario';
+            if (reasonInput && (!reasonInput.value || reasonInput.value === 'Traspaso a otra barra' || reasonInput.value === 'Compra / Recibido de otra barra')) {
+                reasonInput.value = 'Conteo físico de inventario';
+            }
         }
         updateStockModalPreview();
     }
@@ -7936,6 +8021,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 document.getElementById('stock-action-modal').classList.add('hide');
                 renderAdminStockGrid();
+
+                // Imprimir voucher térmico automáticamente al registrar Entrada o Salida
+                imprimirTraspaso({
+                    id_traspaso: data.id_movimiento || Date.now(),
+                    tipo: currentStockModalType,
+                    motivo: reason,
+                    contraparte: reason,
+                    observaciones: `Stock anterior: ${data.stock_anterior !== undefined ? data.stock_anterior : (currentStockModalProduct.stock_actual - (currentStockModalType === 'ENTRADA' ? qty : -qty))} -> Nuevo stock: ${data.stock_nuevo} uds`,
+                    fecha_hora: data.fecha_hora,
+                    responsable: currentUser ? currentUser.nombre : 'Admin',
+                    items: [
+                        {
+                            nombre: currentStockModalProduct.nombre,
+                            cantidad: qty
+                        }
+                    ]
+                });
             } else {
                 notify(data.message || 'No se pudo registrar el movimiento.', 'error');
             }
@@ -7955,7 +8057,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('shm-title').textContent = `Movimientos: ${prod.nombre}`;
         document.getElementById('shm-subtitle').textContent = `Stock actual: ${prod.stock_actual} uds · Consultando registros...`;
         const tbody = document.getElementById('shm-table-body');
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px;">Cargando historial...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 20px;">Cargando historial...</td></tr>`;
 
         modal.classList.remove('hide');
 
@@ -7967,7 +8069,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('shm-subtitle').textContent = `Stock actual: ${prod.stock_actual} uds · ${movs.length} movimientos registrados`;
 
             if (movs.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 24px; color: var(--text-secondary);">No hay movimientos registrados para este producto.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 24px; color: var(--text-secondary);">No hay movimientos registrados para este producto.</td></tr>`;
                 return;
             }
 
@@ -7984,12 +8086,40 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td style="font-size: 0.8rem; color: #c7d2fe;">${escapeHtml(responsable)}</td>
                     <td style="font-size: 0.75rem; white-space: nowrap;">${new Date(m.fecha_hora).toLocaleDateString()} ${new Date(m.fecha_hora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
                     <td style="font-size: 0.8rem; color: var(--text-secondary);">${escapeHtml(m.motivo || '—')}</td>
+                    <td style="text-align: center;"></td>
                 `;
+
+                const btnTd = tr.querySelector('td:last-child');
+                const btnV = document.createElement('button');
+                btnV.type = 'button';
+                btnV.className = 'btn-traspaso-voucher';
+                btnV.style.padding = '3px 8px';
+                btnV.style.fontSize = '0.75rem';
+                btnV.innerHTML = '🖨️ Voucher';
+                btnV.title = 'Reimprimir voucher';
+                btnV.addEventListener('click', () => {
+                    imprimirTraspaso({
+                        id_traspaso: m.id_movimiento || Date.now(),
+                        tipo: m.tipo_movimiento,
+                        motivo: m.motivo || 'Movimiento de stock',
+                        contraparte: m.motivo || 'Movimiento de stock',
+                        observaciones: `Stock: ${m.stock_anterior} -> ${m.stock_nuevo} uds`,
+                        fecha_hora: m.fecha_hora,
+                        responsable: (responsable || 'Admin').replace(/^[^\w]+/, ''),
+                        items: [
+                            {
+                                nombre: m.nombre_producto || prod.nombre,
+                                cantidad: m.cantidad
+                            }
+                        ]
+                    }, true);
+                });
+                btnTd.appendChild(btnV);
                 tbody.appendChild(tr);
             });
         } catch (err) {
             console.error(err);
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #f87171;">Error al consultar el historial.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #f87171;">Error al consultar el historial.</td></tr>`;
         }
     }
 

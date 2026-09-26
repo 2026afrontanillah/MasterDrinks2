@@ -3819,7 +3819,7 @@ app.post('/api/admin/stock/movimiento', (req, res) => {
 
     await dbRun('UPDATE producto SET stock_actual = ? WHERE id_producto = ?', [newStock, id_producto]);
 
-    await dbRun(
+    const movResult = await dbRun(
       `INSERT INTO movimiento_stock (id_producto, id_admin, tipo_movimiento, cantidad, stock_anterior, stock_nuevo, motivo, fecha_hora)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [id_producto, id_admin, tipo, round2(Math.abs(newStock - prevStock)), prevStock, newStock, motivo, nowSql()]
@@ -3837,9 +3837,28 @@ app.post('/api/admin/stock/movimiento', (req, res) => {
       ]
     );
 
-    return newStock;
+    return {
+      newStock,
+      id_movimiento: movResult.insertId,
+      fecha_hora: nowSql(),
+      stock_anterior: prevStock,
+      cantidad: cant,
+      nombre_producto: prod.nombre,
+      tipo,
+      motivo
+    };
   })
-    .then(stock_nuevo => res.json({ success: true, stock_nuevo }))
+    .then(r => res.json({
+      success: true,
+      stock_nuevo: r.newStock,
+      id_movimiento: r.id_movimiento,
+      fecha_hora: r.fecha_hora,
+      stock_anterior: r.stock_anterior,
+      cantidad: r.cantidad,
+      nombre_producto: r.nombre_producto,
+      tipo: r.tipo,
+      motivo: r.motivo
+    }))
     .catch(err => {
       if (err instanceof BusinessError) {
         return res.status(err.status).json({ success: false, message: err.message });

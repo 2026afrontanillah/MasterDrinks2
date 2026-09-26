@@ -5195,6 +5195,35 @@ select option {
     color: var(--success);
 }
 
+.btn-traspaso-voucher {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 8px;
+    border: 1px solid var(--accent-borde, rgba(255, 255, 255, 0.15));
+    background: var(--accent-suave, rgba(255, 255, 255, 0.06));
+    color: var(--text-primary, #fff);
+    cursor: pointer;
+    transition: all 160ms var(--ease-out);
+    margin-left: auto;
+}
+
+.btn-traspaso-voucher:hover {
+    background: var(--accent-suave-mas, rgba(255, 255, 255, 0.15));
+    border-color: var(--accent, #6366f1);
+    transform: translateY(-1px);
+}
+
+.btn-traspaso-voucher:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
 /* ==========================================================================
    REPORTE DE CIERRE
    ========================================================================== */
