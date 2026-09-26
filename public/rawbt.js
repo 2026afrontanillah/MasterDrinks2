@@ -760,7 +760,7 @@ window.ThermalPrinter = (function () {
    * entrega, con casillas para ir tachando mientras se carga la caja, y un
    * hueco de firma: la mercancía cambia de manos y alguien la recibe.
    */
-  function buildTraspasoOps(model, settings) {
+  function buildTraspasoOps(model, settings, copiaLabel) {
     settings = settings || getSettings();
     const w = settings.width;
     const ops = [];
@@ -774,6 +774,9 @@ window.ThermalPrinter = (function () {
     ops.push(op(rule(w)));
     ops.push(op(saliendo ? 'TRASPASO' : (model.motivo === 'COMPRA' ? 'COMPRA / ENTRADA' : 'INGRESO'),
       { align: 'center', bold: true, tall: true, wide: true }));
+    if (copiaLabel || model.copia) {
+      ops.push(op('*** ' + (copiaLabel || model.copia) + ' ***', { align: 'center', bold: true }));
+    }
     if (model.barra) ops.push(op(model.barra, { align: 'center', bold: true }));
     ops.push(op(rule(w)));
     ops.push(op(''));
@@ -869,9 +872,93 @@ window.ThermalPrinter = (function () {
   }
 
   /** Manda a la impresora una lista de ops ya armada (traspasos, informes). */
-  function printOps(ops, settings) {
+  function printOps(ops, settings, copias = 1) {
     settings = settings || getSettings();
-    sendBytes(opsToEscPos(ops, settings), settings);
+    const single = opsToEscPos(ops, settings);
+    if (copias <= 1) {
+      sendBytes(single, settings);
+      return;
+    }
+    if (settings.singleJob) {
+      const both = new Uint8Array(single.length * copias);
+      for (let i = 0; i < copias; i++) {
+        both.set(single, i * single.length);
+      }
+      sendBytes(both, settings);
+    } else {
+      sendBytes(single, settings);
+      setTimeout(() => sendBytes(single, settings), 1500);
+    }
+  }
+
+  /**
+   * Manda a imprimir los vouchers de traspaso / entrada / salida.
+   * Por defecto imprime 2 copias (Copia 1 - Original y Copia 2 - Duplicado)
+   * concatenadas con corte en un solo trabajo para máxima fiabilidad.
+   */
+  function printTraspaso(model, settings, copias = 2) {
+    settings = settings || getSettings();
+    if (copias <= 1) {
+      const ops = buildTraspasoOps(model, settings);
+      sendBytes(opsToEscPos(ops, settings), settings);
+      return;
+    }
+
+    const labels = copias === 2 ? ['COPIA 1 - ORIGINAL', 'COPIA 2 - DUPLICADO'] : null;
+    const ops1 = buildTraspasoOps(model, settings, labels ? labels[0] : 'COPIA 1');
+    const ops2 = buildTraspasoOps(model, settings, labels ? labels[1] : 'COPIA 2');
+    const b1 = opsToEscPos(ops1, settings);
+    const b2 = opsToEscPos(ops2, settings);
+
+    if (settings.singleJob) {
+      const both = new Uint8Array(b1.length + b2.length);
+      both.set(b1, 0);
+      both.set(b2, b1.length);
+      sendBytes(both, settings);
+    } else {
+      sendBytes(b1, settings);
+      setTimeout(() => sendBytes(b2, settings), 1500);
+    }
+  }
+
+  function printTraspasoViaBrowser(model, settings, copias = 2, titulo = 'Voucher') {
+    settings = settings || getSettings();
+    const maxMm = settings.width >= 48 ? '78mm' : '58mm';
+    const labels = copias === 2 ? ['COPIA 1 - ORIGINAL', 'COPIA 2 - DUPLICADO'] : null;
+    const ops1 = buildTraspasoOps(model, settings, labels ? labels[0] : 'COPIA 1');
+    const ops2 = copias >= 2 ? buildTraspasoOps(model, settings, labels ? labels[1] : 'COPIA 2') : null;
+
+    const html1 = opsToHtml(ops1, settings);
+    const html2 = ops2 ? opsToHtml(ops2, settings) : '';
+
+    const win = window.open('', '_blank');
+    if (!win) {
+      alert('El navegador bloqueó la ventana de impresión. Permite las ventanas emergentes.');
+      return;
+    }
+
+    win.document.write(
+      '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + (titulo || 'Voucher') + '</title><style>' +
+      '@page { size: auto; margin: 0mm; }' +
+      '* { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
+      'html, body { margin: 0; padding: 0; background: #fff; color: #000; width: 100%; }' +
+      'body { display: flex; flex-direction: column; align-items: center; justify-content: flex-start;' +
+      ' font-family: "Courier New", Courier, "Lucida Console", monospace; font-size: 13.5px; font-weight: 600; line-height: 1.28; }' +
+      '.ticket { width: 100%; max-width: ' + maxMm + '; margin: 0 auto; padding: 4mm 2mm 8mm 2mm;' +
+      ' page-break-after: always; page-break-inside: avoid; }' +
+      '.ticket:last-child { page-break-after: auto; }' +
+      '.ticket div { white-space: pre-wrap; word-break: break-word; font-family: inherit; }' +
+      '@media print {' +
+      '  body { width: 100%; margin: 0; padding: 0; display: block; }' +
+      '  .ticket { margin: 0 auto; width: 100%; max-width: ' + maxMm + '; padding: 2mm 1mm 6mm 1mm; }' +
+      '}' +
+      '</style></head><body>' +
+      '<div class="ticket">' + html1 + '</div>' +
+      (html2 ? '<div class="ticket">' + html2 + '</div>' : '') +
+      '<script>window.onload=function(){window.print();setTimeout(function(){window.close();},300);};<\/script>' +
+      '</body></html>'
+    );
+    win.document.close();
   }
 
   /**
@@ -952,6 +1039,8 @@ window.ThermalPrinter = (function () {
     saveSettings: saveSettings,
     buildTickets: buildTickets,
     buildTraspasoOps: buildTraspasoOps,
+    printTraspaso: printTraspaso,
+    printTraspasoViaBrowser: printTraspasoViaBrowser,
     printOps: printOps,
     renderText: renderText,
     printToRawBT: printToRawBT,

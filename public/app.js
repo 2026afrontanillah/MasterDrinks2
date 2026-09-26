@@ -2079,8 +2079,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // La comanda del traspaso: imprime el voucher térmico y gestiona la vista previa
-    function imprimirTraspaso(data, forzarModal = false) {
+    // La comanda del traspaso / entrada / salida: imprime 2 copias del voucher térmico y gestiona la vista previa
+    function imprimirTraspaso(data, forzarModal = false, numCopias = 2) {
         const ahora = new Date();
         const dos = n => String(n).padStart(2, '0');
         let fecha = dos(ahora.getDate()) + '/' + dos(ahora.getMonth() + 1) + '/' + ahora.getFullYear();
@@ -2110,18 +2110,24 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const ajustes = ThermalPrinter.getSettings();
-        const ops = ThermalPrinter.buildTraspasoOps(modelo, ajustes);
+        const ops = ThermalPrinter.buildTraspasoOps(modelo, ajustes, 'COPIA 1 - ORIGINAL');
 
-        traspasoParaImprimir = { ops: ops, modelo: modelo };
+        traspasoParaImprimir = { ops: ops, modelo: modelo, copias: numCopias };
         const bodyTraspaso = document.getElementById('traspaso-body');
         if (bodyTraspaso) {
-            bodyTraspaso.innerHTML = ThermalPrinter.helpers.opsToHtml(ops, ajustes);
+            let previewHtml = ThermalPrinter.helpers.opsToHtml(ops, ajustes);
+            if (numCopias > 1) {
+                const ops2 = ThermalPrinter.buildTraspasoOps(modelo, ajustes, 'COPIA 2 - DUPLICADO');
+                previewHtml += `<div style="border-top: 2px dashed #94a3b8; margin: 16px 0; padding-top: 16px; text-align: center; font-size: 0.75rem; color: #64748b; font-weight: 800;">✂️ CORTE DE PAPEL — SEGUNDA COPIA ABAJO ✂️</div>` + ThermalPrinter.helpers.opsToHtml(ops2, ajustes);
+            }
+            bodyTraspaso.innerHTML = previewHtml;
         }
 
-        // Envío directo del voucher a la impresora térmica (RawBT)
+        // Envío directo del voucher a la impresora térmica (RawBT) en 2 copias
         try {
-            ThermalPrinter.printOps(ops, ajustes);
-            notify('Voucher de ' + (data.tipo === 'SALIDA' ? 'traspaso' : 'ingreso') + ' #' + data.id_traspaso + ' enviado a la impresora.', 'ok');
+            ThermalPrinter.printTraspaso(modelo, ajustes, numCopias);
+            const tipoDesc = data.tipo === 'SALIDA' ? 'salida / traspaso' : 'entrada / ingreso';
+            notify(`Voucher de ${tipoDesc} #${data.id_traspaso} enviado a la impresora (${numCopias} copias).`, 'ok');
         } catch (err) {
             console.error('Error al imprimir voucher de traspaso:', err);
             notify('No se pudo imprimir en RawBT: ' + (err.message || 'revisa la impresora'), 'error');
@@ -2188,8 +2194,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('traspaso-imprimir').addEventListener('click', () => {
         if (!traspasoParaImprimir) return;
         try {
-            ThermalPrinter.printOps(traspasoParaImprimir.ops);
-            notify('Voucher enviado a la impresora.', 'ok');
+            const copias = traspasoParaImprimir.copias || 2;
+            ThermalPrinter.printTraspaso(traspasoParaImprimir.modelo, null, copias);
+            notify(`${copias} copias del voucher enviadas a la impresora.`, 'ok');
         } catch (err) {
             notify('No se pudo imprimir: ' + (err.message || 'revisa RawBT'), 'error');
         }
@@ -2199,8 +2206,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnTraspasoNav) {
         btnTraspasoNav.addEventListener('click', () => {
             if (!traspasoParaImprimir) return;
+            const copias = traspasoParaImprimir.copias || 2;
             const titulo = (traspasoParaImprimir.modelo?.tipo === 'SALIDA' ? 'Traspaso #' : 'Ingreso #') + (traspasoParaImprimir.modelo?.id || '');
-            ThermalPrinter.printOpsViaBrowser(traspasoParaImprimir.ops, null, titulo);
+            ThermalPrinter.printTraspasoViaBrowser(traspasoParaImprimir.modelo, null, copias, titulo);
         });
     }
 
@@ -7442,7 +7450,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('ingreso-unidades').value = '';
             cargarTraspasos();
             loadStockSetup();
-            imprimirTraspaso(data);
         } catch (err) {
             notify('Sin conexión con el servidor. Revisa el WiFi.', 'error');
         } finally {
