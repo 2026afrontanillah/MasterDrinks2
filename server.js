@@ -92,6 +92,8 @@ app.get('/wallpaper.png', (req, res) => {
   res.redirect('/Wallpaper.jpg');
 });
 
+
+
 // El afiche del evento, para la pantalla de clave de mesero. De su color sale
 // toda la paleta de esa pantalla, así que ponerlo es lo primero que hay que
 // hacer al montar un evento nuevo.
@@ -3479,6 +3481,7 @@ app.get('/api/admin/comandas', (req, res) => {
 // VOID / CANCEL ORDER
 app.post('/api/admin/comandas/anular', (req, res) => {
   const { id_comanda, id_admin, motivo_anulacion } = req.body;
+  const finalAdminId = Number(id_admin) || 1;
 
   withTransaction(async () => {
     const comanda = await dbGet(
@@ -3502,7 +3505,7 @@ app.post('/api/admin/comandas/anular', (req, res) => {
       `UPDATE comanda SET estado_pago = 'ANULADO', estatus = 'CANCELADA',
        anulada_por_admin = ?, fecha_anulacion = ?, motivo_anulacion = ?
        WHERE id_comanda = ?`,
-      [id_admin, nowSql(), motivo_anulacion, id_comanda]
+      [finalAdminId, nowSql(), motivo_anulacion, id_comanda]
     );
     await dbRun("UPDATE pago_comanda SET estado = 'ANULADO' WHERE id_comanda = ?", [id_comanda]);
 
@@ -3585,12 +3588,12 @@ app.post('/api/admin/comandas/anular', (req, res) => {
       }
     }
 
-    const admin = await dbGet('SELECT nombre FROM administrador_evento WHERE id_admin = ?', [id_admin]);
+    const admin = await dbGet('SELECT nombre FROM administrador_evento WHERE id_admin = ?', [finalAdminId]);
     await dbRun(
       `INSERT INTO auditoria_admin (id_admin, id_evento, accion, entidad, id_registro, detalle, fecha_hora)
        VALUES (?, ?, 'ANULAR_COMANDA', 'comanda', ?, ?, ?)`,
       [
-        id_admin,
+        finalAdminId,
         comanda.id_evento,
         id_comanda,
         `Comanda #${id_comanda} anulada por ${admin ? admin.nombre : 'Admin'}. Motivo: ${motivo_anulacion}`,
@@ -4550,7 +4553,7 @@ async function iniciarServidor() {
     console.log(`   En esta misma tablet/laptop:  http://localhost:${PORT}`);
     if (ips.length) {
       console.log(`\n   👉 En las OTRAS tablets de la barra ${INSTANCIA.nombre}:`);
-      console.log(`      ⚡ Acceso Estándar:`);
+      console.log(`      ⚡ Acceso Estándar POS:`);
       ips.forEach(ip => console.log(`         http://${ip}:${PORT}`));
       if (sslCreds) {
         console.log(`      🔐 Acceso Seguro SSL (Face ID y Cámara activas):`);

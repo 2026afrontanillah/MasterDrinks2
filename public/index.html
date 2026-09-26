@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="description" content="Sistema POS y Administrativo Premium para festivales y eventos musicales.">
     <title>MasterDrinks POS | Sistema de Ventas</title>
     <!-- PWA Settings -->
@@ -219,15 +219,18 @@
             <!-- Center Panel: Products Grid -->
             <main class="pos-main">
                 <div class="pos-top-bar">
-                    <div style="display: inline-flex; align-items: center; gap: 12px;">
+                    <div style="display: inline-flex; align-items: center; gap: 8px;">
                         <button type="button" id="pos-fullscreen-btn" class="pos-fs-btn" title="Pantalla Completa">⛶</button>
                         <h1 class="pos-event-heading" id="pos-event-title">Chivas</h1>
                     </div>
-                    <div class="pos-user-chip" id="pos-user-chip">
-                        <span class="user-chip-icon">👤</span>
-                        <span id="pos-user-chip-name">Andrés Rodríguez</span>
-                        <span id="pos-cajero-label" class="hide"></span>
-                        <span id="pos-mesero-label" class="hide"></span>
+                    <div style="display: inline-flex; align-items: center; gap: 8px;">
+                        <button type="button" id="pos-mobile-cart-btn" class="pos-mobile-cart-btn mobile-only" title="Ver Carrito">🛒 <span id="pos-mobile-cart-badge">0</span></button>
+                        <div class="pos-user-chip" id="pos-user-chip">
+                            <span class="user-chip-icon">👤</span>
+                            <span id="pos-user-chip-name">Andrés Rodríguez</span>
+                            <span id="pos-cajero-label" class="hide"></span>
+                            <span id="pos-mesero-label" class="hide"></span>
+                        </div>
                     </div>
                 </div>
 
@@ -250,11 +253,24 @@
                 <div id="product-grid" class="product-grid">
                     <!-- Products rendered dynamically -->
                 </div>
+
+                <!-- Floating Cart Bar for Mobile Devices -->
+                <div id="pos-mobile-floating-cart" class="pos-mobile-floating-cart hide">
+                    <div class="mfc-content">
+                        <span class="mfc-icon">🛒</span>
+                        <div class="mfc-text">
+                            <span class="mfc-qty"><b id="mfc-count">0</b> items</span>
+                            <span class="mfc-total" id="mfc-total">0.00 Bs.</span>
+                        </div>
+                    </div>
+                    <button type="button" id="mfc-open-btn" class="mfc-btn">Ver Pedido →</button>
+                </div>
             </main>
 
             <!-- Right Panel: Shopping Cart -->
-            <aside class="pos-cart">
+            <aside class="pos-cart" id="pos-cart-sidebar">
                 <div class="cart-top-bar">
+                    <button type="button" id="close-mobile-cart-btn" class="cart-circle-btn mobile-close-cart-btn mobile-only-inline" title="Volver al catálogo" aria-label="Volver">✕</button>
                     <button type="button" id="clear-cart" class="cart-circle-btn" title="Vaciar carrito"
                         aria-label="Vaciar carrito">
                         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
@@ -2093,6 +2109,7 @@
 
             <div class="faceid-viewport-box">
                 <video id="facial-video" autoplay playsinline muted></video>
+                <img id="facial-mobile-preview" class="hide" style="width: 100%; height: 100%; object-fit: cover;" alt="Selfie">
                 <canvas id="facial-canvas" class="hide"></canvas>
                 <div class="faceid-ring-container">
                     <div class="faceid-laser-sweep"></div>
@@ -2112,6 +2129,17 @@
             </div>
 
             <div class="escaneo-acciones faceid-acciones-wrap">
+                <!-- Entrada nativa para cámara de celular (funciona en HTTP y HTTPS) -->
+                <input type="file" id="faceid-mobile-input" accept="image/*" capture="user" class="hide">
+                
+                <button type="button" id="btn-faceid-mobile-cam" class="faceid-btn-mobile-cam">
+                    📸 Tomar Foto con Cámara Frontal
+                </button>
+
+                <a id="btn-faceid-switch-https" href="#" class="faceid-btn-https hide">
+                    🔒 Cambiar a HTTPS Seguro (Cámara en Vivo)
+                </a>
+
                 <div id="faceid-clave-box" class="hide faceid-clave-box-inner">
                     <input type="password" id="input-admin-clave-fallback" placeholder="Contraseña o PIN de Admin..." class="faceid-clave-input">
                     <button type="button" id="btn-submit-admin-clave" class="faceid-btn-submit">

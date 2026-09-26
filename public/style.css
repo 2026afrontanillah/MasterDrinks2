@@ -10622,6 +10622,61 @@ select option {
     box-shadow: 1px 1px 0px #0f172a;
 }
 
+.faceid-btn-mobile-cam {
+    background: #0284c7 !important;
+    color: #ffffff !important;
+    border: 2px solid #0f172a !important;
+    box-shadow: 3px 3px 0px #0f172a !important;
+    border-radius: 12px !important;
+    padding: 12px 14px !important;
+    font-size: 0.95rem !important;
+    font-weight: 800 !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    transition: transform 0.1s, box-shadow 0.1s, background-color 0.15s !important;
+    font-family: 'Outfit', sans-serif !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.faceid-btn-mobile-cam:active {
+    transform: translate(2px, 2px) !important;
+    box-shadow: 1px 1px 0px #0f172a !important;
+}
+
+.faceid-btn-mobile-cam.pulse-highlight {
+    animation: faceid-cam-pulse 1.8s infinite !important;
+}
+
+@keyframes faceid-cam-pulse {
+    0%, 100% { box-shadow: 3px 3px 0px #0f172a; }
+    50% { box-shadow: 0 0 16px #38bdf8, 3px 3px 0px #0f172a; transform: translateY(-1px); }
+}
+
+.faceid-btn-https {
+    background: #dcfce7 !important;
+    color: #166534 !important;
+    border: 2px solid #0f172a !important;
+    box-shadow: 2px 2px 0px #0f172a !important;
+    border-radius: 12px !important;
+    padding: 10px 12px !important;
+    font-size: 0.85rem !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+    text-decoration: none !important;
+    display: block !important;
+    box-sizing: border-box !important;
+    transition: transform 0.1s, box-shadow 0.1s !important;
+}
+
+.faceid-btn-https:active {
+    transform: translate(2px, 2px) !important;
+    box-shadow: 0 0 0 #0f172a !important;
+}
+
 .faceid-pose-steps {
     display: flex;
     justify-content: center;
@@ -10717,3 +10772,862 @@ select option {
         gap: 10px;
     }
 }
+
+/* ==========================================================================
+   MASTERDRINKS MOBILE RESPONSIVENESS & /adm MODAL SYSTEM
+   Asegura visualización perfecta en celulares (iOS y Android) y acceso /adm
+   ========================================================================== */
+
+/* Botones y utilidades de /adm */
+.adm-shortcut-btn {
+    transition: transform 0.15s ease, background 0.15s ease;
+}
+.adm-shortcut-btn:hover {
+    background: rgba(239, 68, 68, 0.22) !important;
+}
+.adm-shortcut-btn:active {
+    transform: scale(0.98);
+}
+
+.pos-top-adm-btn {
+    background: #ef4444 !important;
+    color: #ffffff !important;
+    border: 2px solid #000000 !important;
+    border-radius: 12px !important;
+    padding: 6px 12px !important;
+    font-size: 0.85rem !important;
+    font-weight: 800 !important;
+    cursor: pointer !important;
+    box-shadow: 2px 2px 0px #000000 !important;
+    line-height: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    transition: transform 0.1s ease, box-shadow 0.1s ease !important;
+}
+.pos-top-adm-btn:hover {
+    transform: translate(-1px, -1px) !important;
+    box-shadow: 3px 3px 0px #000000 !important;
+}
+.pos-top-adm-btn:active {
+    transform: translate(1px, 1px) !important;
+    box-shadow: 0px 0px 0px #000000 !important;
+}
+
+.pos-mobile-cart-btn {
+    background: #18181b !important;
+    color: #ffffff !important;
+    border: 2px solid #000000 !important;
+    border-radius: 12px !important;
+    padding: 6px 10px !important;
+    font-size: 0.85rem !important;
+    font-weight: 800 !important;
+    cursor: pointer !important;
+    box-shadow: 2px 2px 0px #000000 !important;
+    display: none;
+    align-items: center !important;
+    gap: 6px !important;
+}
+.pos-mobile-cart-btn span {
+    background: #e0a33e;
+    color: #000;
+    border-radius: 10px;
+    padding: 2px 6px;
+    font-size: 0.75rem;
+    font-weight: 900;
+}
+
+.mobile-only {
+    display: none !important;
+}
+.mobile-only-inline {
+    display: none !important;
+}
+
+/* ==========================================================================
+   MOBILE RESPONSIVENESS OVERRIDES (@media max-width: 850px)
+   Transforma la aplicación para celulares, solucionando lo "achatado y feo"
+   ========================================================================== */
+@media (max-width: 850px) {
+    .mobile-only {
+        display: flex !important;
+    }
+    .mobile-only-inline {
+        display: inline-flex !important;
+    }
+
+    /* 1. LOGIN SCREEN EN CELULAR */
+    .auth-container {
+        padding: 16px !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    .auth-card {
+        width: 100% !important;
+        max-width: 360px !important;
+        padding: 22px 18px !important;
+        border-radius: 20px !important;
+        margin: 0 auto !important;
+    }
+    .login-brand-logo {
+        max-height: 55px !important;
+    }
+    .auth-form .form-group input {
+        font-size: 16px !important; /* Evita autozoom molesto en iOS */
+        padding: 12px 14px !important;
+    }
+    .primary-btn.full-btn {
+        padding: 14px !important;
+        font-size: 1rem !important;
+    }
+
+    /* 2. WAITER PIN LOCK MODAL EN CELULAR (Soluciona botones cortados) */
+    .modal-overlay.pantalla-pin {
+        padding: 0 !important;
+        overflow: hidden !important;
+    }
+    .pin-escena {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        overflow: hidden !important;
+    }
+    .pin-cartel {
+        flex: 0 0 clamp(90px, 15vh, 130px) !important;
+        height: clamp(90px, 15vh, 130px) !important;
+        width: 100% !important;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
+    }
+    .pin-cartel-pie {
+        padding: 8px 14px !important;
+    }
+    .pin-cartel-pie strong {
+        font-size: clamp(1rem, 4.5vw, 1.3rem) !important;
+    }
+    .pin-panel {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        padding: 8px 14px 14px 14px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-evenly !important;
+        align-items: center !important;
+    }
+    .pin-quien {
+        margin: 0 !important;
+        font-size: 0.85rem !important;
+    }
+    .pin-dots-container {
+        margin: 4px 0 !important;
+        gap: 12px !important;
+    }
+    .pin-dots-container .dot {
+        width: 14px !important;
+        height: 14px !important;
+    }
+    .pin-keyboard {
+        gap: clamp(6px, 1.4vh, 12px) clamp(10px, 4vw, 18px) !important;
+        width: 100% !important;
+        max-width: 310px !important;
+        margin: 0 auto !important;
+        justify-items: center !important;
+    }
+    .pin-btn {
+        width: clamp(52px, 14vw, 68px) !important;
+        height: clamp(52px, 14vw, 68px) !important;
+        font-size: clamp(1.25rem, 5vw, 1.6rem) !important;
+    }
+    .pin-enter {
+        width: 100% !important;
+        max-width: 310px !important;
+        height: clamp(44px, 6vh, 52px) !important;
+        margin: 4px auto 0 auto !important;
+        font-size: 0.98rem !important;
+    }
+
+    /* 3. POS SCREEN EN CELULAR (Soluciona layout achatado) */
+    #pos-view:not(.hide) {
+        display: block !important;
+        height: 100dvh !important;
+        overflow: hidden !important;
+        position: relative !important;
+    }
+    #pos-view.hide,
+    #pos-view.hide * {
+        pointer-events: none !important;
+    }
+    #pos-view.hide {
+        display: none !important;
+    }
+    #pos-view .pos-layout {
+        display: block !important;
+        position: relative !important;
+        width: 100% !important;
+        height: 100% !important;
+        overflow: hidden !important;
+    }
+    #pos-view .pos-main {
+        width: 100% !important;
+        height: 100% !important;
+        padding: 10px 12px 90px 12px !important; /* Espacio para barra flotante de carrito */
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Header del POS en celular */
+    .pos-top-bar {
+        margin-bottom: 12px !important;
+        gap: 8px !important;
+    }
+    .pos-event-heading {
+        font-size: 1.25rem !important;
+        -webkit-text-stroke: 0px !important;
+        text-shadow: 1px 1px 0px #702f10, 2px 2px 0px #000 !important;
+        letter-spacing: 0px !important;
+    }
+    .pos-user-chip {
+        padding: 5px 10px !important;
+        font-size: 0.78rem !important;
+        border-radius: 14px !important;
+        max-width: 130px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .user-chip-icon {
+        font-size: 0.9rem !important;
+    }
+
+    /* Carrusel de categorías horizontal */
+    #pos-view .pos-main-header {
+        margin-bottom: 12px !important;
+        overflow: hidden !important;
+    }
+    #pos-view .category-menu {
+        display: flex !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        gap: 6px !important;
+        padding-bottom: 4px !important;
+        scrollbar-width: none !important;
+    }
+    #pos-view .category-btn {
+        flex: 0 0 auto !important;
+        padding: 7px 12px !important;
+        font-size: 0.78rem !important;
+        border-radius: 10px !important;
+        border-width: 2px !important;
+        box-shadow: 2px 2px 0px #000 !important;
+    }
+
+    /* Cuadrícula de productos en celular (2 columnas perfectas) */
+    #pos-view .product-grid {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+        padding-bottom: 30px !important;
+    }
+    #pos-view .product-card {
+        min-height: 200px !important;
+        height: auto !important;
+        border-radius: 16px !important;
+        border-width: 2px !important;
+        padding: 10px 8px 10px 8px !important;
+        box-shadow: 2.5px 2.5px 0px #000 !important;
+    }
+    .gauge-wrapper {
+        width: 80px !important;
+        height: 80px !important;
+        margin-bottom: 4px !important;
+    }
+    .gauge-inner {
+        width: 60px !important;
+        height: 60px !important;
+    }
+    .gauge-cloud-bg {
+        width: 54px !important;
+        height: 54px !important;
+    }
+    #pos-view .product-card .card-bottle-img {
+        max-width: 48px !important;
+        max-height: 48px !important;
+    }
+    #pos-view .product-card h4 {
+        font-size: 0.82rem !important;
+        line-height: 1.18 !important;
+        min-height: 2.4em !important;
+        margin: 2px 0 !important;
+    }
+    #pos-view .product-card .price {
+        font-size: 0.95rem !important;
+        margin-top: 2px !important;
+    }
+    #pos-view .product-card .stock-units-line.stock {
+        font-size: 0.75rem !important;
+    }
+
+    /* Carrito Flotante Inferior en Celular */
+    .pos-mobile-floating-cart {
+        position: fixed !important;
+        bottom: 12px !important;
+        left: 12px !important;
+        right: 12px !important;
+        background: #09090b !important;
+        border: 2px solid #27272a !important;
+        color: #ffffff !important;
+        border-radius: 16px !important;
+        padding: 10px 14px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+        z-index: 900 !important;
+        animation: mfc-slide-up 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .pos-mobile-floating-cart.hide {
+        display: none !important;
+    }
+    @keyframes mfc-slide-up {
+        from { transform: translateY(50px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+    .mfc-content {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .mfc-icon {
+        font-size: 1.3rem;
+    }
+    .mfc-text {
+        display: flex;
+        flex-direction: column;
+    }
+    .mfc-qty {
+        font-size: 0.75rem;
+        color: #a1a1aa;
+    }
+    .mfc-total {
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.15rem;
+        font-weight: 900;
+        color: #e0a33e;
+    }
+    .mfc-btn {
+        background: #e0a33e !important;
+        color: #000000 !important;
+        border: none !important;
+        border-radius: 12px !important;
+        padding: 8px 14px !important;
+        font-family: 'Outfit', sans-serif !important;
+        font-size: 0.9rem !important;
+        font-weight: 800 !important;
+        cursor: pointer !important;
+    }
+
+    /* Carrito en Celular (Drawer Deslizante Completo) */
+    #pos-view .pos-cart {
+        position: fixed !important;
+        inset: 0 !important;
+        z-index: 1500 !important;
+        width: 100vw !important;
+        max-width: 100vw !important;
+        min-width: 0 !important;
+        height: 100dvh !important;
+        background: #ffffff !important;
+        border-left: none !important;
+        transform: translateY(100%) !important;
+        transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        padding: 16px 16px 20px 16px !important;
+        box-sizing: border-box !important;
+        pointer-events: none !important;
+        visibility: hidden !important;
+    }
+    #pos-view:not(.hide) .pos-cart.mobile-open {
+        transform: translateY(0) !important;
+        pointer-events: auto !important;
+        visibility: visible !important;
+    }
+    #pos-view.hide .pos-cart,
+    .pos-cart:not(.mobile-open) {
+        transform: translateY(100%) !important;
+        pointer-events: none !important;
+        visibility: hidden !important;
+    }
+
+    .mobile-close-cart-btn {
+        display: inline-flex !important;
+        font-weight: 900 !important;
+        font-size: 1.1rem !important;
+    }
+
+    /* 4. MODALES DE PAGO EN CELULAR */
+    .pay-sheet,
+    .modal-card {
+        width: 95% !important;
+        max-width: 380px !important;
+        padding: 18px 16px !important;
+        max-height: 92vh !important;
+    }
+
+    /* =========================================================
+       5. ADAPTACIÓN COMPLETA DEL PANEL DE ADMINISTRACIÓN (#admin-view)
+       ========================================================= */
+    #admin-view:not(.hide) {
+        overflow: hidden !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        width: 100vw !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    #admin-view.hide {
+        display: none !important;
+        pointer-events: none !important;
+    }
+
+    #admin-view .admin-layout {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        overflow: hidden !important;
+        gap: 6px !important;
+        padding: 6px !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Sidebar compacto superior tipo barra de pestañas */
+    #admin-view .admin-sidebar {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        height: auto !important;
+        max-height: none !important;
+        padding: 6px 10px 4px 10px !important;
+        border-radius: 16px !important;
+        flex-shrink: 0 !important;
+        box-sizing: border-box !important;
+        box-shadow: 2px 2px 0px #000000 !important;
+        border: 2px solid #000000 !important;
+        gap: 4px !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    /* Header del Sidebar: Logo + Nombre + Badge + Salir alineados */
+    #admin-view .admin-branding {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 6px !important;
+        padding: 0 0 4px 0 !important;
+        margin-bottom: 2px !important;
+        border-bottom: 1.5px solid #000000 !important;
+    }
+
+    #admin-view .admin-branding > div {
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        flex-wrap: wrap !important;
+    }
+
+    #admin-view .admin-branding .logo {
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 1rem !important;
+        border-radius: 8px !important;
+        flex-shrink: 0 !important;
+    }
+
+    #admin-view .admin-branding h2 {
+        font-size: 0.92rem !important;
+        margin: 0 !important;
+    }
+
+    #admin-view .admin-role-badge {
+        font-size: 0.58rem !important;
+        padding: 1px 5px !important;
+        margin-top: 0 !important;
+    }
+
+    #admin-view .admin-user-info {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 6px !important;
+        padding: 2px 6px !important;
+        margin-bottom: 2px !important;
+        border-radius: 10px !important;
+        background: #f4f4f5 !important;
+        border: 1px solid #000000 !important;
+    }
+
+    #admin-view .admin-user-info .user-name {
+        font-size: 0.76rem !important;
+        max-width: 140px !important;
+    }
+
+    #admin-view .admin-salir {
+        padding: 3px 8px !important;
+        font-size: 0.74rem !important;
+    }
+
+    #admin-view .admin-fs-btn {
+        padding: 3px 6px !important;
+        font-size: 0.74rem !important;
+    }
+
+    /* Navegación por pestañas: scroll horizontal tipo pills */
+    #admin-view .admin-nav {
+        display: flex !important;
+        flex-direction: row !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        white-space: nowrap !important;
+        gap: 6px !important;
+        padding: 3px 2px 3px 2px !important;
+        -webkit-overflow-scrolling: touch !important;
+        scrollbar-width: none !important;
+        flex: 0 0 auto !important;
+    }
+
+    #admin-view .admin-nav::-webkit-scrollbar {
+        display: none !important;
+    }
+
+    #admin-view .nav-tab-btn {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 5px !important;
+        width: auto !important;
+        flex: 0 0 auto !important;
+        padding: 6px 12px !important;
+        font-size: 0.78rem !important;
+        border-radius: 9999px !important;
+        border: 1.5px solid #000000 !important;
+        background: #f4f4f5 !important;
+        box-shadow: 1.5px 1.5px 0px #000000 !important;
+        color: #18181b !important;
+    }
+
+    #admin-view .nav-tab-btn.active {
+        background: #d9f99d !important;
+        border-color: #000000 !important;
+        box-shadow: 2px 2px 0px #000000 !important;
+        font-weight: 900 !important;
+        color: #000000 !important;
+    }
+
+    #admin-view .nav-tab-btn .nav-icono {
+        font-size: 0.95rem !important;
+    }
+
+    #admin-view .sidebar-footer {
+        display: none !important;
+    }
+
+    /* Área de Contenido Principal Admin */
+    #admin-view .admin-main {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        height: auto !important;
+        width: 100% !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
+        padding: 4px 4px 60px 4px !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Pestañas individuales: ocupar todo el ancho y scroll vertical fluido */
+    #admin-view .tab-content {
+        height: auto !important;
+        min-height: 100% !important;
+        max-height: none !important;
+        overflow-y: visible !important;
+        overflow-x: hidden !important;
+        padding: 4px 2px 40px 2px !important;
+        display: none;
+    }
+
+    #admin-view .tab-content:not(.hide) {
+        display: block !important;
+    }
+
+    #admin-view .page-title {
+        font-size: 1.25rem !important;
+        margin-bottom: 6px !important;
+    }
+
+    /* =========================================================
+       6. TAB INVENTARIO Y STOCK (#tab-stock) EN CELULAR
+       ========================================================= */
+    #admin-view #tab-stock .admin-stock-toolbar {
+        flex-direction: column !important;
+        gap: 8px !important;
+        margin-bottom: 10px !important;
+    }
+
+    #admin-view #tab-stock .admin-stock-search-wrap {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    #admin-view #tab-stock .admin-stock-search-wrap input {
+        width: 100% !important;
+        height: 42px !important;
+        font-size: 0.9rem !important;
+        border-radius: 12px !important;
+    }
+
+    /* Pills de categorías de inventario con scroll horizontal */
+    #admin-stock-category-pills {
+        display: flex !important;
+        overflow-x: auto !important;
+        white-space: nowrap !important;
+        gap: 6px !important;
+        padding-bottom: 6px !important;
+        scrollbar-width: none !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+
+    #admin-stock-category-pills::-webkit-scrollbar {
+        display: none !important;
+    }
+
+    #admin-stock-category-pills .category-btn {
+        flex: 0 0 auto !important;
+        padding: 6px 12px !important;
+        font-size: 0.78rem !important;
+    }
+
+    /* Grid de tarjetas de stock: 2 columnas perfectas en móvil */
+    #admin-stock-cards-grid {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+    }
+
+    .admin-stock-card {
+        padding: 10px 8px !important;
+        border-radius: 16px !important;
+        border: 2px solid #000000 !important;
+        box-shadow: 2.5px 2.5px 0px #000000 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        background: #ffffff !important;
+    }
+
+    .admin-stock-card-header {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center !important;
+        gap: 4px !important;
+    }
+
+    .admin-stock-card-img {
+        width: 60px !important;
+        height: 60px !important;
+        border-radius: 12px !important;
+        object-fit: contain !important;
+    }
+
+    .admin-stock-card-title {
+        font-size: 0.82rem !important;
+        font-weight: 800 !important;
+        line-height: 1.2 !important;
+        margin: 4px 0 2px 0 !important;
+        word-break: break-word !important;
+    }
+
+    .admin-stock-badge {
+        font-size: 0.85rem !important;
+        padding: 4px 10px !important;
+        border-radius: 10px !important;
+        margin: 4px 0 !important;
+        font-weight: 900 !important;
+    }
+
+    .admin-stock-card-actions {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 6px !important;
+        margin-top: 8px !important;
+    }
+
+    .admin-stock-card-actions button {
+        width: 100% !important;
+        padding: 8px 6px !important;
+        font-size: 0.82rem !important;
+        font-weight: 800 !important;
+        border-radius: 10px !important;
+        border: 1.5px solid #000000 !important;
+    }
+
+    /* Modal de ajuste / agregar stock en celular */
+    .stock-modal-card {
+        max-width: 95% !important;
+        width: 95% !important;
+        padding: 16px 14px !important;
+        border-radius: 20px !important;
+        gap: 12px !important;
+    }
+
+    .stock-modal-header {
+        gap: 10px !important;
+        padding-bottom: 10px !important;
+    }
+
+    .stock-modal-title-box h3 {
+        font-size: 1rem !important;
+    }
+
+    .stock-type-selector {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 6px !important;
+    }
+
+    .stock-type-btn {
+        padding: 8px 4px !important;
+        font-size: 0.82rem !important;
+    }
+
+    .stock-qty-stepper button {
+        width: 48px !important;
+        height: 48px !important;
+        font-size: 1.4rem !important;
+    }
+
+    .stock-qty-stepper input {
+        height: 48px !important;
+        font-size: 1.3rem !important;
+    }
+
+    .stock-preset-chips {
+        gap: 6px !important;
+        justify-content: center !important;
+    }
+
+    .stock-preset-chip {
+        padding: 6px 10px !important;
+        font-size: 0.78rem !important;
+    }
+
+    .stock-calc-preview {
+        padding: 8px 12px !important;
+        font-size: 0.82rem !important;
+    }
+
+    /* Albarán e ingreso múltiple */
+    #albaran-collapsible-section .form-row {
+        grid-template-columns: 1fr !important;
+        gap: 8px !important;
+    }
+
+    #albaran-collapsible-section .acciones-fila {
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+
+    #albaran-collapsible-section .acciones-fila button {
+        width: 100% !important;
+    }
+
+    /* =========================================================
+       7. TAB COMANDAS Y ANULACIONES (#tab-comandas) EN CELULAR
+       ========================================================= */
+    #tab-comandas .comandas-toolbar,
+    #tab-comandas .admin-stock-toolbar {
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+
+    #tab-comandas .comandas-filter-pills {
+        display: flex !important;
+        overflow-x: auto !important;
+        white-space: nowrap !important;
+        gap: 6px !important;
+        padding-bottom: 4px !important;
+        scrollbar-width: none !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+
+    #tab-comandas .comanda-admin-card {
+        padding: 12px !important;
+        border-radius: 14px !important;
+        margin-bottom: 10px !important;
+    }
+
+    #tab-comandas .btn-anular-comanda-admin {
+        width: 100% !important;
+        padding: 10px !important;
+        font-size: 0.88rem !important;
+        font-weight: 800 !important;
+        margin-top: 8px !important;
+    }
+
+    /* =========================================================
+       8. TAB DASHBOARD, CATÁLOGO Y PERSONAL EN CELULAR
+       ========================================================= */
+    #tab-dashboard .kpi-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+        margin-bottom: 12px !important;
+    }
+
+    #tab-dashboard .kpi-card {
+        padding: 12px 10px !important;
+        border-radius: 14px !important;
+    }
+
+    #tab-dashboard .kpi-card strong {
+        font-size: 1.25rem !important;
+    }
+
+    #tab-dashboard .dashboard-details {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
+
+    /* Catálogo y Personal: layouts 2 columnas a 1 columna */
+    .catalogo-grid-2x2,
+    .admin-grid-forms,
+    .listas-par,
+    .tab-catalogo-grid {
+        grid-template-columns: 1fr !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 14px !important;
+    }
+
+    .form-card,
+    .lista-card,
+    .table-section {
+        width: 100% !important;
+        box-sizing: border-box !important;
+        padding: 14px 12px !important;
+        border-radius: 16px !important;
+    }
+
+    .admin-table th,
+    .admin-table td {
+        padding: 8px 6px !important;
+        font-size: 0.8rem !important;
+    }
+
+    .table-container {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+}
+

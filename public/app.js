@@ -601,8 +601,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Lock POS (Switch waiter)
     document.getElementById('lock-pos-btn').addEventListener('click', () => {
-        // Se avisa de lo que se descarta: si el mesero se equivocó de botón,
-        // tiene que enterarse ahora y no cuando vuelva y no encuentre nada.
+        cerrarCarritoMovil();
         const habia = vaciarCarrito();
         if (habia > 0) {
             notify('Se vació el carrito: ' + habia +
@@ -615,19 +614,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Logout from Admin Panel
     document.getElementById('admin-logout-btn').addEventListener('click', () => {
+        cerrarCarritoMovil();
         if (currentCajero) {
             currentUser = currentCajero;
             adminView.classList.add('hide');
+            posView.classList.add('hide');
             showWaiterModal();
             notify('Volviendo al teclado de meseros (' + (currentCajero.nombre || 'Cajero activo') + ').', 'info');
         } else {
             currentUser = null;
             adminView.classList.add('hide');
+            posView.classList.add('hide');
             loginView.classList.remove('hide');
         }
     });
 
     function showWaiterModal() {
+        cerrarCarritoMovil();
         if (currentCajero && !currentUser) {
             currentUser = currentCajero;
         }
@@ -2490,6 +2493,20 @@ document.addEventListener('DOMContentLoaded', () => {
         contador.textContent = cart.length;
         contador.classList.toggle('tiene', cart.length > 0);
 
+        // Actualizar barra flotante de carrito móvil
+        const mfcBar = document.getElementById('pos-mobile-floating-cart');
+        const mfcCount = document.getElementById('mfc-count');
+        const mfcTotal = document.getElementById('mfc-total');
+        const posMobileBadge = document.getElementById('pos-mobile-cart-badge');
+        const totalItemsCount = cart.reduce((s, it) => s + (it.cantidad || 1), 0);
+
+        if (mfcCount) mfcCount.textContent = totalItemsCount;
+        if (mfcTotal) mfcTotal.textContent = `${total.toFixed(2)} Bs.`;
+        if (posMobileBadge) posMobileBadge.textContent = totalItemsCount;
+        if (mfcBar) {
+            mfcBar.classList.toggle('hide', cart.length === 0);
+        }
+
         updatePaymentDetails(total);
         return total;
     }
@@ -3705,6 +3722,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 5. ADMINISTRATOR PANEL CONTROLLER
     // ==========================================
     function showAdminView() {
+        cerrarCarritoMovil();
         detenerSondeoStock();
         cargarConfiguracion().then(pintarConfiguracion);
         cargarInfoAficheAdmin();
@@ -9253,16 +9271,21 @@ document.addEventListener('DOMContentLoaded', () => {
         return faceApiLoadingPromise;
     }
 
-    async function obtenerDescriptorFacialDeep(videoEl) {
-        if (!videoEl || videoEl.paused || videoEl.ended || videoEl.videoWidth === 0) return null;
+    async function obtenerDescriptorFacialDeep(inputEl) {
+        if (!inputEl) return null;
+        if (inputEl instanceof HTMLVideoElement) {
+            if (inputEl.paused || inputEl.ended || inputEl.videoWidth === 0) return null;
+        } else if (inputEl instanceof HTMLImageElement) {
+            if (!inputEl.complete || inputEl.naturalWidth === 0) return null;
+        }
         if (!faceApiLoaded) {
             const ok = await cargarFaceApiModels();
             if (!ok) return null;
         }
 
         try {
-            const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 });
-            const detection = await faceapi.detectSingleFace(videoEl, options)
+            const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.45 });
+            const detection = await faceapi.detectSingleFace(inputEl, options)
                 .withFaceLandmarks()
                 .withFaceDescriptor();
 
@@ -9282,6 +9305,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function iniciarEscaneoFacialAdmin() {
         const modal = document.getElementById('modal-reconocimiento-facial');
         const videoEl = document.getElementById('facial-video');
+        const mobilePreview = document.getElementById('facial-mobile-preview');
         const statusBox = document.querySelector('#modal-reconocimiento-facial .escaneo-status-box');
         const statusText = document.getElementById('facial-status-texto');
         const statusSpinner = document.getElementById('facial-status-spinner');
@@ -9293,33 +9317,130 @@ document.addEventListener('DOMContentLoaded', () => {
         if (claveBox) claveBox.classList.add('hide');
         if (claveInput) claveInput.value = '';
 
-        if (!modal || !videoEl) return;
+        const mobileInput = document.getElementById('faceid-mobile-input');
+        const btnMobileCam = document.getElementById('btn-faceid-mobile-cam');
+        const httpsBtn = document.getElementById('btn-faceid-switch-https');
+
+        if (!modal) return;
 
         modal.classList.remove('hide');
+        if (mobilePreview) {
+            mobilePreview.classList.add('hide');
+            mobilePreview.src = '';
+        }
+        if (videoEl) videoEl.classList.remove('hide');
+
         if (statusBox) statusBox.className = 'faceid-status-bar escaneo-status-box';
         if (statusSpinner) statusSpinner.classList.remove('hide');
         if (centerLock) centerLock.className = 'faceid-center-lock';
         if (lockIcon) lockIcon.textContent = '🔒';
         if (statusText) statusText.textContent = 'Iniciando cámara y Face ID...';
 
+        // Configurar enlace HTTPS seguro
+        const portHttps = location.port ? (Number(location.port) === 3000 ? 3443 : Number(location.port) + 443) : 3443;
+        if (httpsBtn) {
+            httpsBtn.href = `https://${location.hostname}:${portHttps}${location.pathname}${location.search}`;
+        }
+
+        // Configurar listener para captura de cámara de celular (vía input capture)
+        if (btnMobileCam && mobileInput && !btnMobileCam._hasMobileCamListener) {
+            btnMobileCam._hasMobileCamListener = true;
+            btnMobileCam.addEventListener('click', () => {
+                mobileInput.value = '';
+                mobileInput.click();
+            });
+
+            mobileInput.addEventListener('change', async (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (!file) return;
+
+                if (statusSpinner) statusSpinner.classList.remove('hide');
+                if (centerLock) centerLock.className = 'faceid-center-lock';
+                if (lockIcon) lockIcon.textContent = '🔍';
+                if (statusText) statusText.textContent = 'Analizando tu rostro...';
+
+                const reader = new FileReader();
+                reader.onload = async (ev) => {
+                    const img = new Image();
+                    img.onload = async () => {
+                        if (mobilePreview) {
+                            mobilePreview.src = img.src;
+                            mobilePreview.classList.remove('hide');
+                            if (videoEl) videoEl.classList.add('hide');
+                        }
+
+                        const resDeep = await obtenerDescriptorFacialDeep(img);
+                        if (!resDeep) {
+                            if (statusSpinner) statusSpinner.classList.add('hide');
+                            if (statusBox) statusBox.className = 'faceid-status-bar escaneo-status-box error';
+                            if (centerLock) centerLock.className = 'faceid-center-lock error';
+                            if (lockIcon) lockIcon.textContent = '❌';
+                            if (statusText) statusText.textContent = 'No se detectó un rostro claro. Toma la foto de frente con buena luz.';
+                            return;
+                        }
+
+                        try {
+                            const res = await fetch('/api/login/admin-facial', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ liveDescriptor: resDeep.descriptor })
+                            });
+                            const data = await res.json();
+
+                            if (data.success) {
+                                detenerCamaraFacial();
+                                if (statusSpinner) statusSpinner.classList.add('hide');
+                                if (statusBox) statusBox.className = 'faceid-status-bar escaneo-status-box exito';
+                                if (centerLock) centerLock.className = 'faceid-center-lock exito';
+                                if (lockIcon) lockIcon.textContent = '🔓';
+                                if (statusText) statusText.textContent = `¡Face ID Verificado! Bienvenido ${data.user.nombre}`;
+                                vibrar([30, 40, 30]);
+
+                                currentUser = data.user;
+                                setTimeout(() => {
+                                    modal.classList.add('hide');
+                                    showAdminView();
+                                }, 400);
+                            } else if (data.no_registered_faces) {
+                                if (statusSpinner) statusSpinner.classList.add('hide');
+                                if (statusBox) statusBox.className = 'faceid-status-bar escaneo-status-box error';
+                                if (centerLock) centerLock.className = 'faceid-center-lock error';
+                                if (lockIcon) lockIcon.textContent = '❌';
+                                if (statusText) statusText.textContent = data.message;
+                                notify(data.message, 'warning', 8000);
+                            } else {
+                                if (statusSpinner) statusSpinner.classList.add('hide');
+                                if (statusBox) statusBox.className = 'faceid-status-bar escaneo-status-box error';
+                                if (centerLock) centerLock.className = 'faceid-center-lock error';
+                                if (lockIcon) lockIcon.textContent = '❌';
+                                if (statusText) statusText.textContent = `Rostro no reconocido (${data.coincidencia_pct || 0}% coincidencia)`;
+                            }
+                        } catch (err) {
+                            if (statusSpinner) statusSpinner.classList.add('hide');
+                            if (statusText) statusText.textContent = 'Error de conexión con el servidor.';
+                        }
+                    };
+                    img.src = ev.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
         const modelsReady = await cargarFaceApiModels();
         if (!modelsReady) {
             if (statusSpinner) statusSpinner.classList.add('hide');
             if (statusBox) statusBox.classList.add('error');
-            if (statusText) statusText.textContent = 'No se pudieron cargar los modelos de reconocimiento facial.';
-            if (claveBox) claveBox.classList.remove('hide');
-            return;
+            if (statusText) statusText.textContent = 'Cargando modelos faciales...';
         }
 
+        // Si no hay getUserMedia (ej: HTTP en celular)
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             if (statusSpinner) statusSpinner.classList.add('hide');
-            if (statusBox) statusBox.classList.add('error');
-            const portHttps = location.port ? (Number(location.port) === 3000 ? 3443 : Number(location.port) + 443) : 3443;
-            statusText.textContent = `Cámara restringida en HTTP. Ingresa con clave o accede por https://${location.hostname}:${portHttps}`;
-            if (claveBox) {
-                claveBox.classList.remove('hide');
-                setTimeout(() => claveInput?.focus(), 200);
+            if (statusText) statusText.textContent = 'Toca "Tomar Foto con Cámara Frontal" para ingresar con tu rostro:';
+            if (httpsBtn && location.protocol !== 'https:') {
+                httpsBtn.classList.remove('hide');
             }
+            if (claveBox) claveBox.classList.remove('hide');
             return;
         }
 
@@ -9327,20 +9448,19 @@ document.addEventListener('DOMContentLoaded', () => {
             facialStream = await navigator.mediaDevices.getUserMedia({
                 video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
             });
-            videoEl.srcObject = facialStream;
+            if (videoEl) videoEl.srcObject = facialStream;
         } catch (err1) {
             try {
                 facialStream = await navigator.mediaDevices.getUserMedia({ video: true });
-                videoEl.srcObject = facialStream;
+                if (videoEl) videoEl.srcObject = facialStream;
             } catch (err2) {
-                console.error('Error abriendo cámara:', err2);
+                console.warn('Cámara en vivo no disponible directamente:', err2);
                 if (statusSpinner) statusSpinner.classList.add('hide');
-                if (statusBox) statusBox.classList.add('error');
-                if (statusText) statusText.textContent = 'No se pudo acceder a la cámara. Ingresa con contraseña:';
-                if (claveBox) {
-                    claveBox.classList.remove('hide');
-                    setTimeout(() => claveInput?.focus(), 200);
+                if (statusText) statusText.textContent = 'Toca "Tomar Foto con Cámara Frontal" para ingresar con tu rostro:';
+                if (httpsBtn && location.protocol !== 'https:') {
+                    httpsBtn.classList.remove('hide');
                 }
+                if (claveBox) claveBox.classList.remove('hide');
                 return;
             }
         }
@@ -9349,7 +9469,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let escaneando = false;
 
         facialScanInterval = setInterval(async () => {
-            if (escaneando) return;
+            if (escaneando || !videoEl) return;
             escaneando = true;
 
             try {
@@ -9694,4 +9814,31 @@ document.addEventListener('DOMContentLoaded', () => {
             }).observe(catListElem);
         }
     }
+
+    // ==========================================================================
+    // MÓDULO RESPONSIVO MÓVIL Y MODAL /adm (ANULACIÓN DE COMANDAS)
+    // ==========================================================================
+
+    // 1. Manejo del Carrito Móvil
+    const posCartSidebar = document.getElementById('pos-cart-sidebar');
+    const closeMobileCartBtn = document.getElementById('close-mobile-cart-btn');
+    const mfcOpenBtn = document.getElementById('mfc-open-btn');
+    const posMobileCartBtn = document.getElementById('pos-mobile-cart-btn');
+
+    function abrirCarritoMovil() {
+        if (posCartSidebar) {
+            posCartSidebar.classList.add('mobile-open');
+        }
+    }
+
+    function cerrarCarritoMovil() {
+        if (posCartSidebar) {
+            posCartSidebar.classList.remove('mobile-open');
+        }
+    }
+
+    if (closeMobileCartBtn) closeMobileCartBtn.addEventListener('click', cerrarCarritoMovil);
+    if (mfcOpenBtn) mfcOpenBtn.addEventListener('click', abrirCarritoMovil);
+    if (posMobileCartBtn) posMobileCartBtn.addEventListener('click', abrirCarritoMovil);
 });
+
